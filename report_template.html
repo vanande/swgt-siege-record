@@ -1,0 +1,398 @@
+<title>Siege Record</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one ledger column — score strip, filter bar, tabbed tables with expandable matchup rows. */
+:root {
+  --bg: #f2f4f6; --panel: #ffffff; --line: #dde2e8; --ink: #18212b; --ink-2: #4c5866; --ink-3: #7b8794;
+  --accent: #9a5b22; --accent-soft: #f4e9dc;
+  --win: #16907f; --loss: #c2463d; --win-soft: #dff2ee; --loss-soft: #f8e2df;
+  --f-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
+  --accent: #d9954f; --accent-soft: #3a2c1e;
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
+  --accent: #d9954f; --accent-soft: #3a2c1e;
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px; }
+.wrap > * { min-width: 0 }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+h1 { font: 700 clamp(26px, 4vw, 36px)/1.1 var(--f-display); letter-spacing: .02em; margin: 0; text-wrap: balance }
+h1 span { color: var(--accent) }
+.meta { color: var(--ink-3); font-size: 13px; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0 }
+.tile .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600 }
+.tile .big { font: 500 26px/1.1 var(--f-mono); font-variant-numeric: tabular-nums }
+.tile .sub { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.filters label { display: grid; gap: 3px; font-size: 12px; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; min-width: 0 }
+select, input { font: 14px var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; max-width: 100% }
+#fPlayer { border-color: var(--accent); font-weight: 600 }
+input[type=search] { width: 200px }
+.check { display: flex !important; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; color: var(--ink-2) !important; padding-bottom: 6px }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { font: 600 14px var(--f-body); color: var(--ink-2); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; margin-bottom: -1px }
+.tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--accent) }
+.tabs button:hover { color: var(--ink) }
+.hint { color: var(--ink-2); font-size: 14px; margin: 0; max-width: 72ch }
+
+.tablebox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--panel) }
+th[data-sort] { cursor: pointer; user-select: none }
+th[data-dir]::after { content: attr(data-dir); color: var(--accent); margin-left: 4px }
+th.r, td.r { text-align: right }
+td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle }
+tr:last-child > td { border-bottom: 0 }
+tr.row { cursor: pointer }
+tr.row:hover > td { background: var(--accent-soft) }
+tr.detail > td { background: var(--bg); padding: 12px 16px 16px }
+.team { display: flex; flex-wrap: wrap; gap: 4px; }
+.mon { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 2px 8px 2px 2px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); white-space: nowrap }
+.mon.noimg { padding-left: 8px }
+.mon img { width: 26px; height: 26px; border-radius: 4px; display: block }
+.mon.lead { border-color: var(--accent); color: var(--accent); font-weight: 600 }
+tr.detail .mon { background: var(--panel) }
+.wr { display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 120px }
+.bar { width: 64px; height: 8px; border-radius: 4px; background: var(--loss); overflow: hidden; display: flex }
+.bar i { display: block; height: 100%; background: var(--win); border-right: 2px solid var(--panel) }
+.bar i[style="width:0%"], .bar i[style="width:100%"] { border-right: 0 }
+.pill { font: 600 12px var(--f-mono); padding: 1px 7px; border-radius: 10px; white-space: nowrap }
+.pill.W { background: var(--win-soft); color: var(--win) }
+.pill.L { background: var(--loss-soft); color: var(--loss) }
+.w { color: var(--win) } .l { color: var(--loss) }
+.who { font-weight: 600 }
+.sub-t { width: 100%; font-size: 13px }
+.sub-t td, .sub-t th { padding: 5px 8px }
+.sub-t th { background: none }
+.sub-h { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; margin: 0 0 6px }
+.subgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px }
+.subgrid > div { min-width: 0; overflow-x: auto }
+.empty { padding: 24px; color: var(--ink-3); text-align: center }
+
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 8px; position: relative; display: grid; gap: 8px }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2) }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c) }
+svg text { fill: var(--ink-3); font: 11px var(--f-mono) }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); }
+footer { color: var(--ink-3); font-size: 13px }
+@media (prefers-reduced-motion: no-preference) { tr.row > td { transition: background .12s } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span id="hName">Player</span> · Siege Record</h1>
+      <div class="meta" id="hMeta"></div>
+    </div>
+  </header>
+
+  <section class="strip" id="strip" aria-label="Summary"></section>
+
+  <section class="filters" aria-label="Filters">
+    <label for="fPlayer" id="lPlayer" hidden>Member<select id="fPlayer"></select></label>
+    <label for="fFrom">From siege<select id="fFrom"></select></label>
+    <label for="fTo">To siege<select id="fTo"></select></label>
+    <label for="fMin">Min. battles<select id="fMin"><option>1</option><option selected>2</option><option>3</option><option>5</option><option>10</option></select></label>
+    <label for="fSearch">Monster or player<input type="search" id="fSearch" placeholder="e.g. Solveig"></label>
+    <label class="check" for="fLeader"><input type="checkbox" id="fLeader" checked> Leader counts</label>
+  </section>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="roster" aria-selected="false" hidden>Roster</button>
+    <button role="tab" data-tab="defs" aria-selected="true">Toughest defenses</button>
+    <button role="tab" data-tab="teams" aria-selected="false">Offense teams</button>
+    <button role="tab" data-tab="mydef" aria-selected="false">Defenses held</button>
+    <button role="tab" data-tab="sieges" aria-selected="false">Siege by siege</button>
+    <button role="tab" data-tab="log" aria-selected="false">All battles</button>
+  </nav>
+
+  <p class="hint" id="hint"></p>
+  <div id="view"></div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = /*__SIEGE_DATA__*/null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = (w, n) => n ? Math.round(100 * w / n) : 0;
+const GUILD = DATA.players.length > 1;
+const ICONS = DATA.icons || {};
+const S = { tab: GUILD ? "roster" : "defs", sort: {}, open: null };
+try { const t = localStorage.getItem("siegeTab"); if (t && (GUILD || t !== "roster")) S.tab = t; } catch (e) {}
+if (/^#(roster|defs|teams|mydef|sieges|log)$/.test(location.hash) && (GUILD || location.hash !== "#roster")) S.tab = location.hash.slice(1);
+
+const sieges = DATA.sieges;
+const siegeIdx = Object.fromEntries(sieges.map((s, i) => [s.match, i]));
+const who = () => $("#fPlayer").value;          // "" = whole guild
+const isOne = () => !GUILD || !!who();
+const your = () => !GUILD ? "your" : who() ? `${who()}'s` : "the guild's";
+
+function teamKey(t) {
+  const clean = t.filter(m => m && m !== "null");
+  if (!$("#fLeader").checked) return [...clean].sort().join(" · ");
+  return [clean[0], ...clean.slice(1).sort()].join(" · ");
+}
+function mon(m, lead) {
+  const img = ICONS[m] ? `<img src="${ICONS[m]}" alt="" loading="lazy" width="26" height="26">` : "";
+  return `<span class="mon${lead ? " lead" : ""}${img ? "" : " noimg"}"${lead ? ' title="Leader"' : ""}>${img}${esc(m)}</span>`;
+}
+function teamHTML(t, lead = $("#fLeader").checked) {
+  const clean = t.filter(m => m && m !== "null");
+  if (!clean.length) return '<span class="meta">not recorded</span>';
+  const list = lead ? [clean[0], ...clean.slice(1).sort()] : [...clean].sort();
+  return '<div class="team">' + list.map((m, i) => mon(m, lead && i === 0)).join("") + "</div>";
+}
+function wrHTML(w, l) {
+  const p = pct(w, w + l);
+  return `<div class="wr"><span class="num">${p}%</span><span class="bar" role="img" aria-label="${p}% wins"><i style="width:${p}%"></i></span></div>`;
+}
+const wl = (w, l) => `<span class="num"><span class="w">${w}</span>–<span class="l">${l}</span></span>`;
+const plain = t => t.filter(m => m && m !== "null").join(" · ");
+
+function filtered(type, everyone = false) {
+  const a = +$("#fFrom").value, b = +$("#fTo").value, q = $("#fSearch").value.trim().toLowerCase(), p = who();
+  return DATA.battles.filter(x => x.type === type && x.result !== "D" && (everyone || !p || x.player === p)).filter(x => {
+    const i = siegeIdx[x.match]; if (i < a || i > b) return false;
+    if (!q) return true;
+    return [...x.team, ...x.oppTeam, x.opp, x.oppGuild, x.player].some(v => String(v).toLowerCase().includes(q));
+  });
+}
+
+function group(list, keyFn, teamFn) {
+  const m = new Map();
+  for (const x of list) {
+    const k = keyFn(x);
+    if (!m.has(k)) m.set(k, { key: k, team: teamFn(x), w: 0, l: 0, items: [], users: new Set() });
+    const g = m.get(k); g[x.result === "W" ? "w" : "l"]++; g.items.push(x); g.users.add(x.player);
+  }
+  return [...m.values()].map(g => ({ ...g, n: g.w + g.l, wr: pct(g.w, g.w + g.l) }));
+}
+
+function sortRows(rows, tab, def) {
+  const s = S.sort[tab] || def, d = s.dir === "asc" ? 1 : -1;
+  return rows.sort((a, b) => (a[s.key] > b[s.key] ? d : a[s.key] < b[s.key] ? -d : 0) || (b.l - a.l) || (b.n - a.n));
+}
+function th(tab, key, label, def, cls = "") {
+  const s = S.sort[tab] || def;
+  return `<th class="${cls}" data-sort="${key}" ${s.key === key ? `data-dir="${s.dir === "asc" ? "▲" : "▼"}"` : ""} tabindex="0">${label}</th>`;
+}
+
+function subTable(rows, label, teamCol, showUsers) {
+  if (!rows.length) return `<div><p class="sub-h">${label}</p><p class="hint">None.</p></div>`;
+  return `<div><p class="sub-h">${label}</p><table class="sub-t"><thead><tr><th>${teamCol}</th>${showUsers ? "<th>Used by</th>" : ""}<th class="r">W–L</th><th class="r">Win %</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${teamHTML(r.team)}</td>${showUsers ? `<td class="meta">${[...r.users].map(esc).join(", ")}</td>` : ""}<td class="r">${wl(r.w, r.l)}</td><td class="r">${wrHTML(r.w, r.l)}</td></tr>`).join("") + "</tbody></table></div>";
+}
+function battleList(items, defense) {
+  return `<div><p class="sub-h">Battles</p><table class="sub-t"><tbody>` + items.slice().reverse().map(x =>
+    `<tr><td class="num">${x.date.slice(0, 10)}</td>${isOne() ? "" : `<td class="who">${esc(x.player)}</td>`}<td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td class="r"><span class="pill ${x.result}">${defense ? (x.result === "W" ? "Held" : "Broken") : (x.result === "W" ? "Win" : "Loss")}</span></td></tr>`).join("") + "</tbody></table></div>";
+}
+
+const VIEWS = {
+  roster: {
+    label: () => "Roster",
+    hint: () => "Every member's attack and defense record. Click a member to open their own breakdown.",
+    render() {
+      const def = { key: "n", dir: "desc" };
+      const off = filtered("offense", true), dfn = filtered("defense", true);
+      const rows = sortRows(DATA.players.map(p => {
+        const o = off.filter(x => x.player === p), d = dfn.filter(x => x.player === p);
+        const w = o.filter(x => x.result === "W").length, dw = d.filter(x => x.result === "W").length;
+        const fav = group(o, x => teamKey(x.team), x => x.team).sort((a, b) => b.n - a.n)[0];
+        return { key: p, n: o.length, w, l: o.length - w, wr: pct(w, o.length), dn: d.length, dw, dl: d.length - dw, hr: d.length ? pct(dw, d.length) : -1, fav };
+      }), "roster", def);
+      return `<div class="tablebox"><table><thead><tr>${th("roster", "key", "Member", def)}${th("roster", "n", "Attacks", def, "r")}${th("roster", "w", "W–L", def, "r")}${th("roster", "wr", "Win %", def, "r")}${th("roster", "dn", "Def. hit", def, "r")}${th("roster", "hr", "Hold %", def, "r")}<th>Most-used team</th></tr></thead><tbody>` +
+        rows.map(r => `<tr class="row" data-player="${esc(r.key)}"><td class="who">${esc(r.key)}</td><td class="r num">${r.n}</td><td class="r">${wl(r.w, r.l)}</td><td class="r">${r.n ? wrHTML(r.w, r.l) : '<span class="meta">—</span>'}</td><td class="r num">${r.dn}</td><td class="r">${r.dn ? wrHTML(r.dw, r.dl) : '<span class="meta">—</span>'}</td><td>${r.fav ? teamHTML(r.fav.team) + ` <span class="meta num">${r.fav.w}–${r.fav.l}</span>` : '<span class="meta">no attacks</span>'}</td></tr>`).join("") + "</tbody></table></div>";
+    }
+  },
+  defs: {
+    label: () => isOne() ? (GUILD ? "Defenses they struggle with" : "Defenses I struggle with") : "Toughest defenses",
+    hint: () => `Enemy defenses attacked by ${your()} teams, worst first. Click a row to see which teams won or lost against it. A highlighted monster is the defense leader.`,
+    render() {
+      const min = +$("#fMin").value, def = { key: "l", dir: "desc" };
+      const rows = sortRows(group(filtered("offense"), x => teamKey(x.oppTeam), x => x.oppTeam).filter(r => r.n >= min), "defs", def);
+      if (!rows.length) return '<div class="tablebox"><p class="empty">No defenses match these filters. Try lowering "Min. battles".</p></div>';
+      return `<div class="tablebox"><table><thead><tr>${th("defs", "key", "Enemy defense", def)}${th("defs", "n", "Faced", def, "r")}${th("defs", "l", "Losses", def, "r")}${th("defs", "w", "Wins", def, "r")}${th("defs", "wr", "Win %", def, "r")}<th>Best answer</th></tr></thead><tbody>` +
+        rows.map(r => {
+          const mine = group(r.items, x => teamKey(x.team), x => x.team).sort((a, b) => b.w - a.w || a.l - b.l);
+          const best = mine.find(m => m.w > 0);
+          const open = S.open === "defs:" + r.key;
+          return `<tr class="row" data-open="defs:${esc(r.key)}" aria-expanded="${open}"><td>${teamHTML(r.team)}</td><td class="r num">${r.n}</td><td class="r num l">${r.l}</td><td class="r num w">${r.w}</td><td class="r">${wrHTML(r.w, r.l)}</td><td>${best ? teamHTML(best.team) + ` <span class="meta num">${best.w}–${best.l}</span>` : '<span class="meta">No win yet</span>'}</td></tr>` +
+            (open ? `<tr class="detail"><td colspan="6"><div class="subgrid">${subTable(mine, "Teams used against it", "Team", !isOne())}${battleList(r.items)}</div></td></tr>` : "");
+        }).join("") + "</tbody></table></div>";
+    }
+  },
+  teams: {
+    label: () => isOne() && !GUILD ? "My offense teams" : "Offense teams",
+    hint: () => `Win rate of each offense team in ${your()} attacks. Click a row to see which defenses it beat and lost to. A highlighted monster is the leader.`,
+    render() {
+      const min = +$("#fMin").value, def = { key: "n", dir: "desc" };
+      const rows = sortRows(group(filtered("offense"), x => teamKey(x.team), x => x.team).filter(r => r.n >= min), "teams", def);
+      if (!rows.length) return '<div class="tablebox"><p class="empty">No teams match these filters. Try lowering "Min. battles".</p></div>';
+      const users = !isOne();
+      return `<div class="tablebox"><table><thead><tr>${th("teams", "key", "Team", def)}${users ? "<th>Used by</th>" : ""}${th("teams", "n", "Attacks", def, "r")}${th("teams", "w", "Wins", def, "r")}${th("teams", "l", "Losses", def, "r")}${th("teams", "wr", "Win %", def, "r")}</tr></thead><tbody>` +
+        rows.map(r => {
+          const open = S.open === "teams:" + r.key;
+          const vs = group(r.items, x => teamKey(x.oppTeam), x => x.oppTeam);
+          return `<tr class="row" data-open="teams:${esc(r.key)}" aria-expanded="${open}"><td>${teamHTML(r.team)}</td>${users ? `<td class="meta">${[...r.users].map(esc).join(", ")}</td>` : ""}<td class="r num">${r.n}</td><td class="r num w">${r.w}</td><td class="r num l">${r.l}</td><td class="r">${wrHTML(r.w, r.l)}</td></tr>` +
+            (open ? `<tr class="detail"><td colspan="${users ? 6 : 5}"><div class="subgrid">${subTable(vs.filter(v => v.l).sort((a, b) => b.l - a.l), "Lost to", "Enemy defense")}${subTable(vs.filter(v => v.w).sort((a, b) => b.w - a.w), "Beat", "Enemy defense")}</div></td></tr>` : "");
+        }).join("") + "</tbody></table></div>";
+    }
+  },
+  mydef: {
+    label: () => isOne() && !GUILD ? "My defenses" : "Defenses held",
+    hint: () => `How often ${your()} siege defenses held when attacked. SWGT only records the attacker's name for these, not their team.`,
+    render() {
+      const def = { key: "n", dir: "desc" }, users = !isOne();
+      const rows = sortRows(group(filtered("defense"), x => teamKey(x.team), x => x.team), "mydef", def);
+      if (!rows.length) return '<div class="tablebox"><p class="empty">No defense battles in this range.</p></div>';
+      return `<div class="tablebox"><table><thead><tr>${th("mydef", "key", "Defense", def)}${users ? "<th>Owner</th>" : ""}${th("mydef", "n", "Attacked", def, "r")}${th("mydef", "w", "Held", def, "r")}${th("mydef", "l", "Broken", def, "r")}${th("mydef", "wr", "Hold %", def, "r")}</tr></thead><tbody>` +
+        rows.map(r => {
+          const open = S.open === "mydef:" + r.key;
+          return `<tr class="row" data-open="mydef:${esc(r.key)}" aria-expanded="${open}"><td>${teamHTML(r.team)}</td>${users ? `<td class="meta">${[...r.users].map(esc).join(", ")}</td>` : ""}<td class="r num">${r.n}</td><td class="r num w">${r.w}</td><td class="r num l">${r.l}</td><td class="r">${wrHTML(r.w, r.l)}</td></tr>` +
+            (open ? `<tr class="detail"><td colspan="${users ? 6 : 5}"><div class="subgrid">${battleList(r.items, true)}</div></td></tr>` : "");
+        }).join("") + "</tbody></table></div>";
+    }
+  },
+  sieges: {
+    label: () => "Siege by siege",
+    hint: () => `Results of ${your()} attacks in each siege. Hover a bar for the score.`,
+    render() {
+      const a = +$("#fFrom").value, b = +$("#fTo").value;
+      const off = filtered("offense"), dfn = filtered("defense");
+      const rows = sieges.slice(a, b + 1).map(s => {
+        const o = off.filter(x => x.match === s.match), d = dfn.filter(x => x.match === s.match);
+        const w = o.filter(x => x.result === "W").length, dw = d.filter(x => x.result === "W").length;
+        return { ...s, w, l: o.length - w, dw, dl: d.length - dw };
+      });
+      return chart(rows) + `<div class="tablebox"><table><thead><tr><th>Date</th><th>Opponents</th><th class="r">Attacks W–L</th><th class="r">Win %</th><th class="r">Defense held–broken</th></tr></thead><tbody>` +
+        rows.slice().reverse().map(r => `<tr><td class="num">${r.date}</td><td>${r.opponents.map(esc).join(" · ")}</td><td class="r">${r.w + r.l ? wl(r.w, r.l) : '<span class="meta">no attacks</span>'}</td><td class="r">${r.w + r.l ? wrHTML(r.w, r.l) : ""}</td><td class="r">${r.dw + r.dl ? wl(r.dw, r.dl) : '<span class="meta">—</span>'}</td></tr>`).join("") + "</tbody></table></div>";
+    }
+  },
+  log: {
+    label: () => "All battles",
+    hint: () => "Every attack and defense battle in the selected range, newest first.",
+    render() {
+      const all = [...filtered("offense"), ...filtered("defense")].sort((x, y) => y.ts - x.ts);
+      if (!all.length) return '<div class="tablebox"><p class="empty">No battles match these filters.</p></div>';
+      const shown = all.slice(0, 600), users = !isOne();
+      return `<div class="tablebox"><table><thead><tr><th>Date</th>${users ? "<th>Member</th>" : ""}<th>Type</th><th>Team</th><th>Opponent</th><th>Their team</th><th class="r">Result</th></tr></thead><tbody>` +
+        shown.map(x => `<tr><td class="num">${x.date}</td>${users ? `<td class="who">${esc(x.player)}</td>` : ""}<td>${x.type === "offense" ? "Attack" : "Defense"}</td><td>${teamHTML(x.team)}</td><td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td>${teamHTML(x.oppTeam)}</td><td class="r"><span class="pill ${x.result}">${x.type === "defense" ? (x.result === "W" ? "Held" : "Broken") : (x.result === "W" ? "Win" : "Loss")}</span></td></tr>`).join("") +
+        "</tbody></table></div>" + (all.length > shown.length ? `<p class="hint">Showing the newest ${shown.length} of ${all.length}. Pick a member or search to narrow it down.</p>` : "");
+    }
+  }
+};
+
+function chart(rows) {
+  const H = 180, padL = 28, padB = 26, padT = 10, bw = 22, gap = 10;
+  const W = Math.max(320, padL + rows.length * (bw + gap) + 8);
+  const max = Math.max(4, ...rows.map(r => r.w + r.l));
+  const step = max > 40 ? 20 : max > 16 ? 10 : max > 8 ? 4 : 2, top = Math.ceil(max / step) * step;
+  const y = v => padT + (H - padT - padB) * (1 - v / top);
+  let g = "";
+  for (let v = 0; v <= top; v += step) g += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  rows.forEach((r, i) => {
+    const x = padL + 8 + i * (bw + gap), base = y(0), yw = y(r.w), yl = y(r.w + r.l);
+    if (r.w) g += `<rect x="${x}" y="${yw}" width="${bw}" height="${Math.max(0, base - yw)}" rx="2" fill="var(--win)"/>`;
+    if (r.l) g += `<rect x="${x}" y="${yl}" width="${bw}" height="${Math.max(0, yw - yl - (r.w ? 2 : 0))}" rx="2" fill="var(--loss)"/>`;
+    if (i % Math.ceil(rows.length / 8) === 0) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${r.date.slice(5)}</text>`;
+    g += `<rect class="hit" x="${x - gap / 2}" y="${padT}" width="${bw + gap}" height="${H - padT - padB}" fill="transparent" data-tip="${esc(r.date)} · ${esc(r.opponents.join(" / "))}: ${r.w}W–${r.l}L"/>`;
+  });
+  return `<div class="chartbox"><div class="legend"><span style="--c:var(--win)">Wins</span><span style="--c:var(--loss)">Losses</span></div><div style="overflow-x:auto"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Attack wins and losses per siege">${g}</svg></div><div class="tip" hidden></div></div>`;
+}
+
+function strip() {
+  const off = filtered("offense"), dfn = filtered("defense");
+  const w = off.filter(x => x.result === "W").length, dw = dfn.filter(x => x.result === "W").length;
+  const defs = group(off, x => teamKey(x.oppTeam), x => x.oppTeam).sort((a, b) => b.l - a.l || a.wr - b.wr)[0];
+  const minN = isOne() ? 4 : 10;
+  const teams = group(off, x => teamKey(x.team), x => x.team).filter(t => t.n >= minN).sort((a, b) => b.wr - a.wr || b.n - a.n)[0];
+  const tile = (lbl, big, sub) => `<div class="tile"><span class="lbl">${lbl}</span><span class="big">${big}</span><span class="sub">${sub}</span></div>`;
+  $("#strip").innerHTML =
+    tile("Attacks", `${pct(w, off.length)}%`, `${w} wins, ${off.length - w} losses`) +
+    tile("Defense held", dfn.length ? `${pct(dw, dfn.length)}%` : "—", `${dw} held, ${dfn.length - dw} broken`) +
+    tile("Hardest defense", defs ? `${defs.l} losses` : "—", defs ? teamHTML(defs.team) : "") +
+    tile(`Best team (${minN}+ attacks)`, teams ? `${teams.wr}%` : "—", teams ? teamHTML(teams.team) + ` <span class="num">${teams.w}–${teams.l}</span>` : "");
+}
+
+function render() {
+  if (S.tab === "roster" && !GUILD) S.tab = "defs";
+  $("#hName").textContent = GUILD ? (who() || DATA.guild) : DATA.players[0];
+  strip();
+  document.querySelectorAll("#tabs button").forEach(b => {
+    b.setAttribute("aria-selected", b.dataset.tab === S.tab);
+    b.textContent = VIEWS[b.dataset.tab].label();
+  });
+  $("#hint").textContent = VIEWS[S.tab].hint();
+  $("#view").innerHTML = VIEWS[S.tab].render();
+}
+
+function init() {
+  const days = /^\d+$/.test(DATA.range) ? `last ${DATA.range} days` : DATA.range;
+  $("#hMeta").textContent = `${DATA.guild}${GUILD ? ` · ${DATA.players.length} members` : ""} · ${sieges.length} sieges, ${days} · data from SWGT, ${DATA.generated}`;
+  $("#foot").textContent = `Generated ${DATA.generated} by ${GUILD ? "fetch_guild.py" : "fetch_siege.py"}. Win rates count wins and losses only.`;
+  if (GUILD) {
+    $("#lPlayer").hidden = false;
+    $("#tabs [data-tab=roster]").hidden = false;
+    $("#fPlayer").innerHTML = '<option value="">Whole guild</option>' +
+      [...DATA.players].sort((a, b) => a.localeCompare(b)).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("");
+  } else {
+    $("#fPlayer").innerHTML = `<option value="">${esc(DATA.players[0])}</option>`;
+  }
+  const opts = sieges.map((s, i) => `<option value="${i}">${s.date} · ${esc(s.opponents.join(" / ") || s.match)}</option>`).join("");
+  $("#fFrom").innerHTML = opts; $("#fTo").innerHTML = opts;
+  $("#fFrom").value = 0; $("#fTo").value = sieges.length - 1;
+
+  ["#fPlayer", "#fFrom", "#fTo", "#fMin", "#fLeader"].forEach(id => $(id).addEventListener("change", () => { S.open = null; render(); }));
+  $("#fSearch").addEventListener("input", render);
+  $("#tabs").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    S.tab = b.dataset.tab; S.open = null;
+    try { localStorage.setItem("siegeTab", S.tab); } catch (err) {}
+    render();
+  });
+  $("#view").addEventListener("click", e => {
+    const h = e.target.closest("th[data-sort]");
+    if (h) {
+      const cur = S.sort[S.tab] || {}, key = h.dataset.sort;
+      S.sort[S.tab] = { key, dir: cur.key === key && cur.dir === "desc" ? "asc" : "desc" };
+      return render();
+    }
+    const p = e.target.closest("tr[data-player]");
+    if (p) { $("#fPlayer").value = p.dataset.player; S.tab = "defs"; S.open = null; window.scrollTo({ top: 0 }); return render(); }
+    const r = e.target.closest("tr.row");
+    if (r) { S.open = S.open === r.dataset.open ? null : r.dataset.open; render(); }
+  });
+  $("#view").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("th[data-sort]")) { e.preventDefault(); e.target.click(); } });
+  $("#view").addEventListener("mousemove", e => {
+    const tip = $("#view .tip"); if (!tip) return;
+    const hit = e.target.closest(".hit");
+    if (!hit) { tip.hidden = true; return; }
+    const box = tip.parentElement.getBoundingClientRect();
+    tip.textContent = hit.dataset.tip; tip.hidden = false;
+    tip.style.left = (e.clientX - box.left) + "px"; tip.style.top = (e.clientY - box.top - 10) + "px";
+  });
+  render();
+}
+init();
+</script>
