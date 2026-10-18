@@ -9,7 +9,7 @@ Usage:
 For every guild member on one page, use fetch_guild.py.
 
 Settings come from a .env file next to this script (see .env.example):
-    SWGT_SUBDOMAIN=reisfarmer      # the part before .swgt.io in your guild's SWGT address
+    SWGT_URL=https://reisfarmer.swgt.io   # your guild's SWGT address
     SWGT_USER=your_username
     SWGT_PASSWORD=your_password
 Anything missing is asked for when the script runs.
@@ -33,6 +33,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -40,6 +41,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, "cache")
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) swgt-siege-export"
 ICON_BASE = "https://do9d4mpqk497d.cloudfront.net/common/images/monsters36/"
+NO_SIEGES = ("No sieges found in this date range. SWGT only has sieges your guild uploaded "
+             "(with the SWGT plugin in the Summoners War Exporter); try a longer --days range.")
 MATCH_RE = re.compile(r"siegeBattle/specific&siegeID=(\d+)&matchID=(\d+)&guildID=(\d+)")
 
 
@@ -64,6 +67,8 @@ def load_env():
     """Read KEY=VALUE lines from .env beside the script; real environment variables win."""
     path = os.path.join(HERE, ".env")
     if not os.path.exists(path):
+        if os.path.exists(path + ".txt"):
+            print('Found ".env.txt" but no ".env". Rename it to ".env" (Notepad adds ".txt" when saving).')
         return
     for line in read_file(path).splitlines():
         line = line.strip()
@@ -75,34 +80,77 @@ def load_env():
             os.environ.setdefault(key.strip(), value)
 
 
+def setting(name, prompt, secret=False):
+    """A value from .env / the environment, or typed in by the user when it's missing."""
+    value = os.environ.get(name)
+    if value:
+        return value
+    try:
+        value = getpass.getpass(prompt) if secret else input(prompt)
+    except EOFError:
+        value = ""
+    if not value.strip():
+        sys.exit(f"{name} is missing. Add it to the .env file next to the script (see .env.example).")
+    return value.strip()
+
+
+def parse_swgt_url(raw):
+    """Turn the guild's SWGT address into https://<guild>.swgt.io, or exit with a clear message."""
+    example = "for example: SWGT_URL=https://reisfarmer.swgt.io"
+    raw = (raw or "").strip().strip("'\"")
+    if not raw:
+        sys.exit(f"SWGT_URL is missing. Put your guild's SWGT address in .env, {example}")
+    if "://" not in raw:
+        if re.fullmatch(r"[A-Za-z0-9-]+", raw):
+            sys.exit(f"SWGT_URL must be the full address, not just the guild part. "
+                     f"Did you mean SWGT_URL=https://{raw.lower()}.swgt.io ?")
+        raw = "https://" + raw
+    parts = urllib.parse.urlsplit(raw)
+    host = (parts.hostname or "").lower()
+    if parts.scheme not in ("http", "https") or not re.fullmatch(r"[a-z0-9-]+\.swgt\.io", host):
+        sys.exit(f"SWGT_URL {raw!r} is not an SWGT guild address. It should look like "
+                 f"https://<your guild>.swgt.io ({example}).")
+    # Pages like .../login.jsp are fine too: only the site address is kept.
+    return f"https://{host}"
+
+
 class SWGT:
-    def __init__(self, subdomain=None):
-        subdomain = (subdomain or os.environ.get("SWGT_SUBDOMAIN")
-                     or input("SWGT subdomain (the part before .swgt.io): "))
-        # Accept "reisfarmer", "reisfarmer.swgt.io" or a full https:// address.
-        subdomain = re.sub(r"^https?://|\.swgt\.io.*$", "", subdomain.strip().lower()).strip("/")
-        self.base = f"https://{subdomain}.swgt.io"
+    def __init__(self, url=None):
+        self.base = parse_swgt_url(url or setting("SWGT_URL", "Your guild's SWGT address "
+                                                  "(e.g. https://reisfarmer.swgt.io): "))
         self.opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         self.opener.addheaders = [("User-Agent", UA)]
 
     def get(self, path, params=None):
+        return self.get_with_url(path, params)[0]
+
+    def get_with_url(self, path, params=None):
+        """Return (page text, final URL after redirects)."""
         url = self.base + path + ("?" + urllib.parse.urlencode(params) if params else "")
-        with self.opener.open(url, timeout=120) as r:
-            return r.read().decode("utf-8", errors="replace")
+        try:
+            with self.opener.open(url, timeout=120) as r:
+                return r.read().decode("utf-8", errors="replace"), r.geturl()
+        except urllib.error.URLError as e:
+            sys.exit(f"Could not reach {self.base}: {getattr(e, 'reason', e)}. Check your internet connection.")
 
     def login(self):
-        user = os.environ.get("SWGT_USER") or input("SWGT username: ")
-        password = os.environ.get("SWGT_PASSWORD") or getpass.getpass("SWGT password: ")
+        _, landed = self.get_with_url("/")
+        if "noSiteSetup" in landed:
+            sys.exit(f"There is no SWGT site at {self.base}. Check SWGT_URL in your .env: copy the address "
+                     "from your browser's address bar while you're on your guild's SWGT site.")
+        user = setting("SWGT_USER", "SWGT username: ")
+        password = setting("SWGT_PASSWORD", "SWGT password: ", secret=True)
         data = urllib.parse.urlencode({"username": user, "password": password,
                                        "oldBrowser": "Y", "keepMeLoggedIn": "Y"}).encode()
-        # self.base is always built as https://<subdomain>.swgt.io, so no file: or custom schemes.
+        # parse_swgt_url only ever returns https://<guild>.swgt.io, so no file: or custom schemes.
         req = urllib.request.Request(self.base + "/controllers/account/login", data=data,  # noqa: S310
                                      headers={"Referer": self.base + "/login.jsp"})
         with self.opener.open(req, timeout=60) as r:
             r.read()
-        if 'id="password"' in self.get("/"):
-            sys.exit("Login failed: check your SWGT username and password.")
+        if "/controllers/account/logout" not in self.get("/"):
+            sys.exit("Login failed: check SWGT_USER and SWGT_PASSWORD in your .env "
+                     "(they are the ones you use on the SWGT website, not your game login).")
         print("Logged in.")
 
 
@@ -121,6 +169,8 @@ def guild_members(page):
 
 def find_player(page, name):
     members = guild_members(page)
+    if not members:
+        sys.exit("No guild members found. Your SWGT account must belong to the guild on this SWGT site.")
     for value, label, selected in members:
         if (name and label.lower() == name.lower()) or (not name and selected):
             return value, label
@@ -327,7 +377,7 @@ def common_args(description):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     load_env()
     ap = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--subdomain", help="SWGT subdomain, e.g. reisfarmer (default: SWGT_SUBDOMAIN from .env)")
+    ap.add_argument("--url", help="guild SWGT address, e.g. https://reisfarmer.swgt.io (default: SWGT_URL from .env)")
     ap.add_argument("--days", default="365", help="30, 60, 90, 180 or 365 (default 365), or an SSD_xx season id")
     ap.add_argument("--refresh", action="store_true", help="ignore cached match pages")
     return ap
@@ -339,7 +389,7 @@ def main():
     ap.add_argument("--out", default=os.path.join(HERE, "output"))
     args = ap.parse_args()
 
-    swgt = SWGT(args.subdomain)
+    swgt = SWGT(args.url)
     swgt.login()
     focus, player = find_player(member_page(swgt, "siegeOffenseTab", ""), args.player)
     off_page = member_page(swgt, "siegeOffenseTab", focus, args.days)
@@ -348,6 +398,8 @@ def main():
     matches = {**match_ids(off_page), **match_ids(def_page)}
     meta = {**match_rows(def_page), **match_rows(off_page)}
     print(f"{player}: {len(matches)} sieges in range")
+    if not matches:
+        sys.exit(NO_SIEGES)
 
     battles, icons = load_battles(swgt, matches, meta, {player}, args.refresh)
     if check_totals(battles, player, off_page, def_page):
@@ -357,5 +409,12 @@ def main():
     write_outputs(data, args.out, f"{player} Siege Record")
 
 
+def run(entry):
+    try:
+        entry()
+    except KeyboardInterrupt:
+        sys.exit("\nStopped. Downloaded sieges are kept in cache/, so the next run picks up where this one left off.")
+
+
 if __name__ == "__main__":
-    main()
+    run(main)

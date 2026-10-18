@@ -15,6 +15,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fetch_siege import (
     HERE,
+    NO_SIEGES,
     SWGT,
     build_data,
     check_totals,
@@ -24,6 +25,7 @@ from fetch_siege import (
     match_ids,
     match_rows,
     member_page,
+    run,
     write_outputs,
 )
 
@@ -35,7 +37,7 @@ def main():
                     help="don't load each member's SWGT tabs (match list then comes from your own tabs only)")
     args = ap.parse_args()
 
-    swgt = SWGT(args.subdomain)
+    swgt = SWGT(args.url)
     swgt.login()
     members = guild_members(member_page(swgt, "siegeOffenseTab", ""))
     print(f"{len(members)} guild members")
@@ -53,6 +55,8 @@ def main():
         meta.update(match_rows(off))
         time.sleep(0.5)
     print(f"{len(matches)} sieges in range")
+    if not matches:
+        sys.exit(NO_SIEGES)
 
     names = [m[1] for m in members]
     battles, icons = load_battles(swgt, matches, meta, set(names), args.refresh)
@@ -67,4 +71,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run(main)
