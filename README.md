@@ -39,3 +39,7 @@ member whose numbers differ.
   guild's battle data, and `.env` holds your password.
 - The script only sees sieges that your guild uploaded to SWGT. Battles fought under an
   older in-game name are counted under the player's current name.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
