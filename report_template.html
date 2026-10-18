@@ -8,6 +8,7 @@
   --bg: #f2f4f6; --panel: #ffffff; --line: #dde2e8; --ink: #18212b; --ink-2: #4c5866; --ink-3: #7b8794;
   --accent: #9a5b22; --accent-soft: #f4e9dc;
   --win: #16907f; --loss: #c2463d; --win-soft: #dff2ee; --loss-soft: #f8e2df;
+  --gold: #b8860b; --silver: #7d8a96; --bronze: #a0602e;
   --f-display: "Cinzel", "Trajan Pro", Georgia, serif;
   --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
@@ -15,11 +16,13 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
   --accent: #d9954f; --accent-soft: #3a2c1e;
-  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120; color-scheme: dark } }
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120;
+  --gold: #e0b341; --silver: #aab6c2; --bronze: #d08a52; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
   --accent: #d9954f; --accent-soft: #3a2c1e;
-  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120; color-scheme: dark }
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120;
+  --gold: #e0b341; --silver: #aab6c2; --bronze: #d08a52; color-scheme: dark }
 
 * { box-sizing: border-box }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
@@ -92,6 +95,18 @@ tr.detail .mon { background: var(--panel) }
 .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c) }
 svg text { fill: var(--ink-3); font: 11px var(--f-mono) }
 .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); }
+.rankby { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-3) }
+.rankby button { font: 600 13px var(--f-body); color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer }
+.rankby button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft) }
+.board { display: grid; gap: 10px }
+.rank { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font: 600 14px var(--f-mono); color: var(--ink-2); border: 1px solid var(--line) }
+.rank.p1 { color: var(--gold); border: 2px solid var(--gold) }
+.rank.p2 { color: var(--silver); border: 2px solid var(--silver) }
+.rank.p3 { color: var(--bronze); border: 2px solid var(--bronze) }
+.rank.none { border-style: dashed; color: var(--ink-3) }
+th.on { color: var(--accent) }
+td.on { font-weight: 600 }
+tr.unranked > td { color: var(--ink-3) }
 footer { color: var(--ink-3); font-size: 13px }
 @media (prefers-reduced-motion: no-preference) { tr.row > td { transition: background .12s } }
 </style>
@@ -116,7 +131,7 @@ footer { color: var(--ink-3); font-size: 13px }
   </section>
 
   <nav class="tabs" role="tablist" id="tabs">
-    <button role="tab" data-tab="roster" aria-selected="false" hidden>Roster</button>
+    <button role="tab" data-tab="board" aria-selected="false" hidden>Leaderboard</button>
     <button role="tab" data-tab="defs" aria-selected="true">Toughest defenses</button>
     <button role="tab" data-tab="teams" aria-selected="false">Offense teams</button>
     <button role="tab" data-tab="mydef" aria-selected="false">Defenses held</button>
@@ -137,10 +152,12 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pct = (w, n) => n ? Math.round(100 * w / n) : 0;
 const GUILD = DATA.players.length > 1;
+const TABS = ["board", "defs", "teams", "mydef", "sieges", "log"];
 const ICONS = DATA.icons || {};
-const S = { tab: GUILD ? "roster" : "defs", sort: {}, open: null };
-try { const t = localStorage.getItem("siegeTab"); if (t && (GUILD || t !== "roster")) S.tab = t; } catch (e) {}
-if (/^#(roster|defs|teams|mydef|sieges|log)$/.test(location.hash) && (GUILD || location.hash !== "#roster")) S.tab = location.hash.slice(1);
+const S = { tab: GUILD ? "board" : "defs", sort: {}, open: null, rankBy: "wr" };
+try { const t = localStorage.getItem("siegeTab"); if (TABS.includes(t) && (GUILD || t !== "board")) S.tab = t; } catch (e) {}
+const hashTab = location.hash.slice(1);
+if (TABS.includes(hashTab) && (GUILD || hashTab !== "board")) S.tab = hashTab;
 
 const sieges = DATA.sieges;
 const siegeIdx = Object.fromEntries(sieges.map((s, i) => [s.match, i]));
@@ -208,26 +225,73 @@ function battleList(items, defense) {
     `<tr><td class="num">${x.date.slice(0, 10)}</td>${isOne() ? "" : `<td class="who">${esc(x.player)}</td>`}<td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td class="r"><span class="pill ${x.result}">${defense ? (x.result === "W" ? "Held" : "Broken") : (x.result === "W" ? "Win" : "Loss")}</span></td></tr>`).join("") + "</tbody></table></div>";
 }
 
+// Leaderboard rankings: the column each one sorts by, and for percentages, the count a member needs enough of.
+const RANK_BY = {
+  wr: { label: "Win %", col: "wr", qualify: "attacks", count: "n" },
+  w: { label: "Attack wins", col: "w", count: "n" },
+  hr: { label: "Hold %", col: "hr", qualify: "defense battles", count: "dn" },
+  dw: { label: "Defense holds", col: "dw", count: "dn" },
+};
+
+function boardRows() {
+  const off = filtered("offense", true), dfn = filtered("defense", true), m = RANK_BY[S.rankBy];
+  const rows = DATA.players.map(p => {
+    const o = off.filter(x => x.player === p), d = dfn.filter(x => x.player === p);
+    const w = o.filter(x => x.result === "W").length, dw = d.filter(x => x.result === "W").length;
+    const fav = group(o, x => teamKey(x.team), x => x.team).sort((a, b) => b.n - a.n)[0];
+    return { key: p, n: o.length, w, l: o.length - w, wr: pct(w, o.length), dn: d.length, dw, dl: d.length - dw, hr: pct(dw, d.length), fav };
+  });
+  // A percentage needs a minimum sample: half the median count among members who played at all,
+  // capped at 30 so long date ranges don't shut out members who joined later.
+  let need = 1;
+  if (m.qualify) {
+    const counts = rows.map(r => r[m.count]).filter(Boolean).sort((a, b) => a - b);
+    if (counts.length) need = Math.min(30, Math.max(1, Math.round(counts[Math.floor(counts.length / 2)] / 2)));
+  }
+  const ranked = r => r[m.count] >= need && (m.qualify ? true : r[m.col] > 0);
+  // Rank percentages by the exact rate, not the rounded one; ties go to whoever has more battles.
+  const value = r => m.col === "wr" ? (r.n ? r.w / r.n : 0) : m.col === "hr" ? (r.dn ? r.dw / r.dn : 0) : r[m.col];
+  rows.sort((a, b) => (ranked(b) - ranked(a)) || (value(b) - value(a)) || (b[m.count] - a[m.count]) || a.key.localeCompare(b.key));
+  let place = 0;
+  rows.forEach((r, i) => {
+    if (!ranked(r)) { r.rank = 0; return; }
+    if (i === 0 || value(r) !== value(rows[i - 1])) place = i + 1;
+    r.rank = place;
+  });
+  return { rows, need };
+}
+
 const VIEWS = {
-  roster: {
-    label: () => "Roster",
-    hint: () => "Every member's attack and defense record. Click a member to open their own breakdown.",
+  board: {
+    label: () => "Leaderboard",
+    hint: () => {
+      const m = RANK_BY[S.rankBy];
+      return `Members ranked by ${m.label.toLowerCase()}.` +
+        (m.qualify ? ` To be ranked, a member needs at least ${boardRows().need} ${m.qualify} (half the guild's typical number, at most 30), so a few lucky battles can't top the table.` : "") +
+        " Click a member to open their breakdown.";
+    },
     render() {
-      const def = { key: "n", dir: "desc" };
-      const off = filtered("offense", true), dfn = filtered("defense", true);
-      const rows = sortRows(DATA.players.map(p => {
-        const o = off.filter(x => x.player === p), d = dfn.filter(x => x.player === p);
-        const w = o.filter(x => x.result === "W").length, dw = d.filter(x => x.result === "W").length;
-        const fav = group(o, x => teamKey(x.team), x => x.team).sort((a, b) => b.n - a.n)[0];
-        return { key: p, n: o.length, w, l: o.length - w, wr: pct(w, o.length), dn: d.length, dw, dl: d.length - dw, hr: d.length ? pct(dw, d.length) : -1, fav };
-      }), "roster", def);
-      return `<div class="tablebox"><table><thead><tr>${th("roster", "key", "Member", def)}${th("roster", "n", "Attacks", def, "r")}${th("roster", "w", "W–L", def, "r")}${th("roster", "wr", "Win %", def, "r")}${th("roster", "dn", "Def. hit", def, "r")}${th("roster", "hr", "Hold %", def, "r")}<th>Most-used team</th></tr></thead><tbody>` +
-        rows.map(r => `<tr class="row" data-player="${esc(r.key)}"><td class="who">${esc(r.key)}</td><td class="r num">${r.n}</td><td class="r">${wl(r.w, r.l)}</td><td class="r">${r.n ? wrHTML(r.w, r.l) : '<span class="meta">—</span>'}</td><td class="r num">${r.dn}</td><td class="r">${r.dn ? wrHTML(r.dw, r.dl) : '<span class="meta">—</span>'}</td><td>${r.fav ? teamHTML(r.fav.team) + ` <span class="meta num">${r.fav.w}–${r.fav.l}</span>` : '<span class="meta">no attacks</span>'}</td></tr>`).join("") + "</tbody></table></div>";
+      const { rows, need } = boardRows(), m = RANK_BY[S.rankBy];
+      const col = (key, label) => `<th class="r${m.col === key ? " on" : ""}">${label}</th>`;
+      const cell = (key, html) => `<td class="r${m.col === key ? " on" : ""}">${html}</td>`;
+      const rank = r => r.rank
+        ? `<span class="rank${r.rank <= 3 ? " p" + r.rank : ""}">${r.rank}</span>`
+        : `<span class="rank none" title="${m.qualify ? `Fewer than ${need} ${m.qualify}` : "None yet"}">–</span>`;
+      return `<div class="board"><div class="rankby" role="group" aria-label="Rank by">Rank by` +
+        Object.entries(RANK_BY).map(([k, v]) => `<button type="button" data-rank="${k}" aria-pressed="${S.rankBy === k}">${v.label}</button>`).join("") +
+        `</div><div class="tablebox"><table><thead><tr><th>#</th><th>Member</th>${col("w", "Attack wins")}${col("n", "Attacks")}${col("wr", "Win %")}${col("dw", "Def. holds")}${col("dn", "Def. hit")}${col("hr", "Hold %")}<th>Most-used team</th></tr></thead><tbody>` +
+        rows.map(r => `<tr class="row${r.rank ? "" : " unranked"}" data-player="${esc(r.key)}"><td>${rank(r)}</td><td class="who">${esc(r.key)}</td>` +
+          cell("w", `<span class="num">${r.w}</span>`) + cell("n", `<span class="num">${r.n}</span>`) +
+          cell("wr", r.n ? wrHTML(r.w, r.l) : '<span class="meta">—</span>') +
+          cell("dw", `<span class="num">${r.dw}</span>`) + cell("dn", `<span class="num">${r.dn}</span>`) +
+          cell("hr", r.dn ? wrHTML(r.dw, r.dl) : '<span class="meta">—</span>') +
+          `<td>${r.fav ? teamHTML(r.fav.team) + ` <span class="meta num">${r.fav.w}–${r.fav.l}</span>` : '<span class="meta">no attacks</span>'}</td></tr>`).join("") +
+        "</tbody></table></div></div>";
     }
   },
   defs: {
-    label: () => isOne() ? (GUILD ? "Defenses they struggle with" : "Defenses I struggle with") : "Toughest defenses",
-    hint: () => `Enemy defenses attacked by ${your()} teams, worst first. Click a row to see which teams won or lost against it. A highlighted monster is the defense leader.`,
+    label: () => isOne() ? `${who() || DATA.players[0]} struggles with` : "Toughest defenses",
+    hint: () => (isOne() ? `Enemy defenses that beat ${who() || DATA.players[0]} most, worst first.` : "Enemy defenses that beat the guild most, worst first.") + ` Click a row to see which teams won or lost against it. A highlighted monster is the defense leader.`,
     render() {
       const min = +$("#fMin").value, def = { key: "l", dir: "desc" };
       const rows = sortRows(group(filtered("offense"), x => teamKey(x.oppTeam), x => x.oppTeam).filter(r => r.n >= min), "defs", def);
@@ -336,7 +400,7 @@ function strip() {
 }
 
 function render() {
-  if (S.tab === "roster" && !GUILD) S.tab = "defs";
+  if (S.tab === "board" && !GUILD) S.tab = "defs";
   $("#hName").textContent = GUILD ? (who() || DATA.guild) : DATA.players[0];
   strip();
   document.querySelectorAll("#tabs button").forEach(b => {
@@ -353,7 +417,7 @@ function init() {
   $("#foot").textContent = `Generated ${DATA.generated} by ${GUILD ? "fetch_guild.py" : "fetch_siege.py"}. Win rates count wins and losses only.`;
   if (GUILD) {
     $("#lPlayer").hidden = false;
-    $("#tabs [data-tab=roster]").hidden = false;
+    $("#tabs [data-tab=board]").hidden = false;
     $("#fPlayer").innerHTML = '<option value="">Whole guild</option>' +
       [...DATA.players].sort((a, b) => a.localeCompare(b)).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("");
   } else {
@@ -378,6 +442,8 @@ function init() {
       S.sort[S.tab] = { key, dir: cur.key === key && cur.dir === "desc" ? "asc" : "desc" };
       return render();
     }
+    const rb = e.target.closest("button[data-rank]");
+    if (rb) { S.rankBy = rb.dataset.rank; return render(); }
     const p = e.target.closest("tr[data-player]");
     if (p) { $("#fPlayer").value = p.dataset.player; S.tab = "defs"; S.open = null; window.scrollTo({ top: 0 }); return render(); }
     const r = e.target.closest("tr.row");

@@ -7,7 +7,7 @@ Turns your guild's [SWGT](https://swgt.io) siege logs into an interactive HTML r
 - how often your siege defenses hold
 - siege-by-siege results, and every battle in one searchable list
 
-`fetch_guild.py` puts every guild member on one page, with a roster to compare everyone.
+`fetch_guild.py` puts every guild member on one page, with a leaderboard ranking everyone by win rate, wins or defense holds.
 Monster icons are built into the report, so it is a single file you can open offline or send to anyone.
 
 ## Before you start
@@ -100,7 +100,7 @@ member's totals against SWGT.
 | `python fetch_siege.py --refresh` | Download every siege again instead of reusing saved ones. |
 | `python fetch_siege.py --url https://other.swgt.io` | Use another guild's SWGT site for this run, instead of `SWGT_URL` from `.env`. |
 | `python fetch_siege.py --out some_folder` | Write the report somewhere else, for example one folder per player. |
-| `python fetch_guild.py --skip-check` | Faster guild run that doesn't compare each member's totals with SWGT. |
+| `python fetch_guild.py --skip-check` | Faster guild run: skips checking each member's totals, but only includes the sieges you took part in. |
 
 Add `--help` to either script to see all options.
 
