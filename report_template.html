@@ -1,83 +1,119 @@
 <title>Siege Record</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: one ledger column — score strip, filter bar, tabbed tables with expandable matchup rows. */
+/* Layout: a siege "war room" ledger. Dark stone header band with a battlement edge, then the score
+   tiles, filters, pill tabs and tables. Bronze is the accent; gold, silver and bronze are kept for the podium. */
 :root {
-  --bg: #f2f4f6; --panel: #ffffff; --line: #dde2e8; --ink: #18212b; --ink-2: #4c5866; --ink-3: #7b8794;
-  --accent: #9a5b22; --accent-soft: #f4e9dc;
+  --bg: #eef1f4; --panel: #ffffff; --line: #dbe1e7; --ink: #18212b; --ink-2: #4c5866; --ink-3: #7b8794;
+  --accent: #9a5b22; --accent-soft: #f5eadf;
   --win: #16907f; --loss: #c2463d; --win-soft: #dff2ee; --loss-soft: #f8e2df;
-  --gold: #b8860b; --silver: #7d8a96; --bronze: #a0602e;
+  --band-bg: #1d242c; --band-bg-2: #2a333d; --band-ink: #f4efe7; --band-ink-2: #b7c0c9; --band-chip: rgb(255 255 255 / .08);
+  --shadow: 0 1px 2px rgb(18 28 40 / .05), 0 6px 18px rgb(18 28 40 / .06);
+  --shadow-up: 0 2px 4px rgb(18 28 40 / .06), 0 12px 28px rgb(18 28 40 / .10);
+  --gold-edge: #8a5f0c; --silver-edge: #66727e; --bronze-edge: #7a4219; --crown-ink: #2b2210;
+  --gold-tint: rgb(214 160 30 / .10); --silver-tint: rgb(130 145 160 / .10); --bronze-tint: rgb(176 104 48 / .10);
+  --gold-glow: rgb(240 190 60 / .55);
   --f-display: "Cinzel", "Trajan Pro", Georgia, serif;
   --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
-  --accent: #d9954f; --accent-soft: #3a2c1e;
-  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120;
-  --gold: #e0b341; --silver: #aab6c2; --bronze: #d08a52; color-scheme: dark } }
+  --bg: #12161b; --panel: #1b2027; --line: #2b333d; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
+  --accent: #d9954f; --accent-soft: #33281d;
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #16322d; --loss-soft: #3a201f;
+  --band-bg: #0b0e12; --band-bg-2: #171c23; --band-ink: #f4efe7; --band-ink-2: #a9b3bd; --band-chip: rgb(255 255 255 / .07);
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .25);
+  --shadow-up: 0 2px 4px rgb(0 0 0 / .35), 0 12px 28px rgb(0 0 0 / .4);
+  --gold-tint: rgb(224 179 65 / .09); --silver-tint: rgb(170 182 194 / .08); --bronze-tint: rgb(208 138 82 / .09);
+  --gold-glow: rgb(240 190 60 / .45); color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #14181d; --panel: #1c2128; --line: #2d3540; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
-  --accent: #d9954f; --accent-soft: #3a2c1e;
-  --win: #2fa896; --loss: #de6a5f; --win-soft: #173530; --loss-soft: #3d2120;
-  --gold: #e0b341; --silver: #aab6c2; --bronze: #d08a52; color-scheme: dark }
+  --bg: #12161b; --panel: #1b2027; --line: #2b333d; --ink: #e8ecf0; --ink-2: #b0bac5; --ink-3: #808b97;
+  --accent: #d9954f; --accent-soft: #33281d;
+  --win: #2fa896; --loss: #de6a5f; --win-soft: #16322d; --loss-soft: #3a201f;
+  --band-bg: #0b0e12; --band-bg-2: #171c23; --band-ink: #f4efe7; --band-ink-2: #a9b3bd; --band-chip: rgb(255 255 255 / .07);
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .25);
+  --shadow-up: 0 2px 4px rgb(0 0 0 / .35), 0 12px 28px rgb(0 0 0 / .4);
+  --gold-tint: rgb(224 179 65 / .09); --silver-tint: rgb(170 182 194 / .08); --bronze-tint: rgb(208 138 82 / .09);
+  --gold-glow: rgb(240 190 60 / .45); color-scheme: dark }
 
 * { box-sizing: border-box }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
-.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 64px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 22px; }
-.wrap > * { min-width: 0 }
-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
-h1 { font: 700 clamp(26px, 4vw, 36px)/1.1 var(--f-display); letter-spacing: .02em; margin: 0; text-wrap: balance }
-h1 span { color: var(--accent) }
-.meta { color: var(--ink-3); font-size: 13px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.inner { max-width: 1180px; margin: 0 auto }
 .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.meta { color: var(--ink-3); font-size: 13px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 
-.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0 }
-.tile .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600 }
-.tile .big { font: 500 26px/1.1 var(--f-mono); font-variant-numeric: tabular-nums }
-.tile .sub { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere }
+/* Header band with a battlement edge */
+.band { position: relative; background: linear-gradient(160deg, var(--band-bg-2), var(--band-bg) 60%); color: var(--band-ink); padding-block: 30px 34px; margin-bottom: 14px }
+.band::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px;
+  background: linear-gradient(90deg, var(--band-bg) 0 50%, transparent 50% 100%) 0 0 / 40px 100% repeat-x }
+.eyebrow { font: 600 12px var(--f-body); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px }
+h1 { font: 800 clamp(28px, 5vw, 46px)/1.05 var(--f-display); letter-spacing: .02em; margin: 0; text-wrap: balance }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px }
+.chips span { font-size: 13px; color: var(--band-ink-2); background: var(--band-chip); border: 1px solid rgb(255 255 255 / .08); padding: 3px 10px; border-radius: 999px }
+.chips b { color: var(--band-ink); font-weight: 600 }
 
-.filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.wrap { padding-block: 22px 64px; display: grid; gap: 20px }
+.wrap > * { min-width: 0 }
+
+/* Score tiles */
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-content: start; min-width: 0; box-shadow: var(--shadow) }
+.tile > :not(.ring) { grid-column: 1 }
+.tile .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); font-weight: 600 }
+.tile .big { font: 600 30px/1.05 var(--f-mono); font-variant-numeric: tabular-nums }
+.tile .big small { font: 600 14px var(--f-body); color: var(--ink-3); margin-left: 4px }
+.tile .sub { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; grid-column: 1 / -1 }
+.ring { grid-column: 2; grid-row: 1 / span 2; width: 58px; height: 58px; transform: rotate(-90deg) }
+.ring circle { fill: none; stroke-width: 5; }
+.ring .track { stroke: var(--loss-soft) }
+.ring .val { stroke: var(--win); stroke-linecap: round; stroke-dasharray: 100 }
+
+/* Filters */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow) }
 .filters label { display: grid; gap: 3px; font-size: 12px; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; min-width: 0 }
-select, input { font: 14px var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; max-width: 100% }
+select, input { font: 14px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; min-width: 0; max-width: 100% }
+select:hover, input:hover { border-color: var(--accent) }
 #fPlayer { border-color: var(--accent); font-weight: 600 }
 input[type=search] { width: 200px }
 .check { display: flex !important; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; color: var(--ink-2) !important; padding-bottom: 6px }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 
-.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
-.tabs button { font: 600 14px var(--f-body); color: var(--ink-2); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; margin-bottom: -1px }
-.tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--accent) }
+/* Pill tabs with a sliding highlight */
+.tabs { position: relative; display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.tabs button { position: relative; z-index: 1; font: 600 14px var(--f-body); color: var(--ink-2); background: none; border: 0; border-radius: 10px; padding: 8px 14px; cursor: pointer }
+.tabs button[aria-selected="true"] { color: var(--accent) }
 .tabs button:hover { color: var(--ink) }
-.hint { color: var(--ink-2); font-size: 14px; margin: 0; max-width: 72ch }
+#tabInk { position: absolute; z-index: 0; border-radius: 10px; background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); pointer-events: none }
+.hint { color: var(--ink-2); font-size: 14px; margin: 0; max-width: 76ch }
 
-.tablebox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+/* Tables */
+.tablebox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow) }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--panel) }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; padding: 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--panel) }
 th[data-sort] { cursor: pointer; user-select: none }
+th[data-sort]:hover { color: var(--ink) }
 th[data-dir]::after { content: attr(data-dir); color: var(--accent); margin-left: 4px }
 th.r, td.r { text-align: right }
-td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle }
 tr:last-child > td { border-bottom: 0 }
 tr.row { cursor: pointer }
 tr.row:hover > td { background: var(--accent-soft) }
-tr.detail > td { background: var(--bg); padding: 12px 16px 16px }
+tr.row:hover > td:first-child { box-shadow: inset 3px 0 0 var(--accent) }
+tr.detail > td { background: var(--bg); padding: 14px 16px 18px }
 .team { display: flex; flex-wrap: wrap; gap: 4px; }
-.mon { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 2px 8px 2px 2px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); white-space: nowrap }
-.mon.noimg { padding-left: 8px }
-.mon .ico { width: 26px; height: 26px; border-radius: 4px; display: block; flex: none; background-repeat: no-repeat }
+.mon { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 2px 9px 2px 2px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); white-space: nowrap }
+.mon.noimg { padding-left: 9px }
+.mon .ico { width: 26px; height: 26px; border-radius: 6px; display: block; flex: none; background-repeat: no-repeat }
 .mon.lead { border-color: var(--accent); color: var(--accent); font-weight: 600 }
 tr.detail .mon { background: var(--panel) }
 .wr { display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 120px }
-.bar { width: 64px; height: 8px; border-radius: 4px; background: var(--loss); overflow: hidden; display: flex }
-.bar i { display: block; height: 100%; background: var(--win); border-right: 2px solid var(--panel) }
+.bar { width: 70px; height: 8px; border-radius: 4px; background: var(--loss); overflow: hidden; display: flex }
+.bar i { display: block; height: 100%; background: var(--win); border-right: 2px solid var(--panel); transform-origin: left }
 .bar i[style="width:0%"], .bar i[style="width:100%"] { border-right: 0 }
-.pill { font: 600 12px var(--f-mono); padding: 1px 7px; border-radius: 10px; white-space: nowrap }
+.pill { font: 600 12px var(--f-mono); padding: 2px 8px; border-radius: 999px; white-space: nowrap }
 .pill.W { background: var(--win-soft); color: var(--win) }
 .pill.L { background: var(--loss-soft); color: var(--loss) }
 .w { color: var(--win) } .l { color: var(--loss) }
@@ -85,65 +121,144 @@ tr.detail .mon { background: var(--panel) }
 .sub-t { width: 100%; font-size: 13px }
 .sub-t td, .sub-t th { padding: 5px 8px }
 .sub-t th { background: none }
-.sub-h { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; margin: 0 0 6px }
+.sub-h { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600; margin: 0 0 6px }
 .subgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px }
 .subgrid > div { min-width: 0; overflow-x: auto }
-.empty { padding: 24px; color: var(--ink-3); text-align: center }
+.empty { padding: 28px; color: var(--ink-3); text-align: center }
 
-.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 8px; position: relative; display: grid; gap: 8px }
+/* Chart */
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 8px; position: relative; display: grid; gap: 8px; box-shadow: var(--shadow); margin-bottom: 14px }
 .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2) }
-.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c) }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c) }
 svg text { fill: var(--ink-3); font: 11px var(--f-mono) }
-.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); }
-.rankby { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-3) }
-.rankby button { font: 600 13px var(--f-body); color: var(--ink-2); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer }
-.rankby button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft) }
-.board { display: grid; gap: 10px }
-.rank { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font: 600 14px var(--f-mono); color: var(--ink-2); border: 1px solid var(--line) }
-.rank.p1 { color: var(--gold); border: 2px solid var(--gold) }
-.rank.p2 { color: var(--silver); border: 2px solid var(--silver) }
-.rank.p3 { color: var(--bronze); border: 2px solid var(--bronze) }
-.rank.none { border-style: dashed; color: var(--ink-3) }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -100%); box-shadow: var(--shadow-up) }
+
+/* Leaderboard */
+.board { display: grid; gap: 16px }
+.rankby { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: .06em }
+.seg { display: inline-flex; flex-wrap: wrap; padding: 3px; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow) }
+.seg button { font: 600 13px var(--f-body); text-transform: none; letter-spacing: 0; color: var(--ink-2); background: none; border: 0; border-radius: 999px; padding: 5px 14px; cursor: pointer }
+.seg button:hover { color: var(--ink) }
+.seg button[aria-pressed="true"] { color: var(--panel); background: var(--accent) }
+
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: end }
+.pod { font: inherit; color: inherit; text-align: center; cursor: pointer; display: grid; justify-items: center; gap: 6px; padding: 18px 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); min-width: 0; position: relative; overflow: hidden }
+.pod::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--metal) }
+.pod.t1 { --metal: linear-gradient(90deg, #a8740f, #ffe9a3, #e8b730, #a8740f); background: linear-gradient(180deg, var(--gold-tint), var(--panel) 70%); padding-top: 30px; order: 2 }
+.pod.t2 { --metal: linear-gradient(90deg, #7f8b96, #ffffff, #c5ced6, #7f8b96); background: linear-gradient(180deg, var(--silver-tint), var(--panel) 70%); order: 1 }
+.pod.t3 { --metal: linear-gradient(90deg, #8a4f22, #ffd2a8, #cf8a4e, #8a4f22); background: linear-gradient(180deg, var(--bronze-tint), var(--panel) 70%); order: 3 }
+.pod .place { font: 700 12px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3) }
+.pod .name { font: 700 clamp(16px, 2vw, 20px)/1.15 var(--f-display); overflow-wrap: anywhere }
+.pod .val { font: 600 30px/1 var(--f-mono); font-variant-numeric: tabular-nums }
+.pod.t1 .val { font-size: 38px }
+.pod .why { font-size: 13px; color: var(--ink-2) }
+.pod .team { justify-content: center; margin-top: 4px }
+.pod .crown { width: 54px; height: 44px }
+.pod.t1 .crown { width: 70px; height: 57px }
+
+.crown { display: block; overflow: visible; stroke-width: 1; stroke-linejoin: round }
+.crown.t1 { fill: url(#g-gold); stroke: var(--gold-edge) }
+.crown.t2 { fill: url(#g-silver); stroke: var(--silver-edge) }
+.crown.t3 { fill: url(#g-bronze); stroke: var(--bronze-edge) }
+.crown text { fill: var(--crown-ink); stroke: none; font: 700 9px var(--f-mono) }
+.rank { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font: 600 14px var(--f-mono); color: var(--ink-2); background: var(--bg) }
+.rank.none { background: none; border: 1px dashed var(--line); color: var(--ink-3) }
+.crownrank .crown { width: 34px; height: 28px }
+tr.top1 > td { background: var(--gold-tint) }
+tr.top2 > td { background: var(--silver-tint) }
+tr.top3 > td { background: var(--bronze-tint) }
 th.on { color: var(--accent) }
 td.on { font-weight: 600 }
 tr.unranked > td { color: var(--ink-3) }
 footer { color: var(--ink-3); font-size: 13px }
-@media (prefers-reduced-motion: no-preference) { tr.row > td { transition: background .12s } }
+
+@media (max-width: 640px) {
+  .podium { grid-template-columns: 1fr }
+  .pod.t1 { order: 1 } .pod.t2 { order: 2 } .pod.t3 { order: 3 }
+  .ring { width: 48px; height: 48px }
+}
+
+/* Motion: only for viewers who haven't asked for less. Every element rests visible. */
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+@keyframes grow { from { transform: scaleX(0) } }
+@keyframes growUp { from { transform: scaleY(0) } }
+@keyframes ringFill { from { stroke-dashoffset: 100 } }
+@keyframes shimmer { 0%, 100% { filter: drop-shadow(0 0 0 transparent) brightness(1) } 50% { filter: drop-shadow(0 0 6px var(--gold-glow)) brightness(1.12) } }
+@media (prefers-reduced-motion: no-preference) {
+  h1, .eyebrow, .chips { animation: rise .6s cubic-bezier(.2, .7, .2, 1) both }
+  .eyebrow { animation-delay: 0s } h1 { animation-delay: .06s } .chips { animation-delay: .14s }
+  .strip.enter .tile { animation: rise .45s cubic-bezier(.2, .7, .2, 1) both }
+  .strip.enter .tile:nth-child(2) { animation-delay: .06s }
+  .strip.enter .tile:nth-child(3) { animation-delay: .12s }
+  .strip.enter .tile:nth-child(4) { animation-delay: .18s }
+  .strip.enter .ring .val { animation: ringFill 1s cubic-bezier(.2, .7, .2, 1) .15s both }
+  .tile, .pod, .mon { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease }
+  .tile:hover, .pod:hover { transform: translateY(-3px); box-shadow: var(--shadow-up) }
+  .mon:hover { transform: translateY(-1px); border-color: var(--accent) }
+  #tabInk.ready { transition: left .32s cubic-bezier(.3, .8, .2, 1), top .32s cubic-bezier(.3, .8, .2, 1), width .32s cubic-bezier(.3, .8, .2, 1), height .32s }
+  .tabs button, .seg button { transition: color .2s, background-color .2s }
+  tr.row > td { transition: background-color .15s }
+  #view.enter > * { animation: rise .35s cubic-bezier(.2, .7, .2, 1) both }
+  #view.enter tbody > tr.row[style] { animation: rise .35s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i) * 24ms + .08s) }
+  #view.enter .bar i { animation: grow .7s cubic-bezier(.2, .7, .2, 1) .15s both }
+  #view.enter .cb { transform-box: fill-box; transform-origin: bottom; animation: growUp .55s cubic-bezier(.2, .7, .2, 1) both }
+  #view.enter .pod { animation: rise .5s cubic-bezier(.2, .7, .2, 1) both }
+  #view.enter .pod.t1 { animation-delay: .1s } #view.enter .pod.t3 { animation-delay: .18s }
+  .pod .crown.t1 { animation: shimmer 3.2s ease-in-out infinite }
+  tr.detail > td > * { animation: rise .3s cubic-bezier(.2, .7, .2, 1) both }
+}
 </style>
 
-<div class="wrap">
-  <header>
-    <div>
-      <h1><span id="hName">Player</span> · Siege Record</h1>
-      <div class="meta" id="hMeta"></div>
-    </div>
-  </header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".5" stop-color="#ebbb34"/><stop offset="1" stop-color="#a8740f"/></linearGradient>
+    <linearGradient id="g-silver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9d1d9"/><stop offset="1" stop-color="#808c97"/></linearGradient>
+    <linearGradient id="g-bronze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd8b2"/><stop offset=".5" stop-color="#cf8a4e"/><stop offset="1" stop-color="#8a4f22"/></linearGradient>
+    <symbol id="crown" viewBox="0 0 32 26">
+      <path d="M3.5 9.5 L9.5 15 L16 5 L22.5 15 L28.5 9.5 L26.3 20.5 H5.7 Z"/>
+      <rect x="5.2" y="21.3" width="21.6" height="3.6" rx="1.2"/>
+      <circle cx="3.2" cy="8.2" r="2.1"/><circle cx="16" cy="3.2" r="2.3"/><circle cx="28.8" cy="8.2" r="2.1"/>
+    </symbol>
+  </defs>
+</svg>
 
-  <section class="strip" id="strip" aria-label="Summary"></section>
+<header class="band gutter">
+  <div class="inner">
+    <p class="eyebrow">Summoners War · Guild Siege</p>
+    <h1 id="hName">Player</h1>
+    <div class="chips" id="hMeta"></div>
+  </div>
+</header>
 
-  <section class="filters" aria-label="Filters">
-    <label for="fPlayer" id="lPlayer" hidden>Member<select id="fPlayer"></select></label>
-    <label for="fFrom">From siege<select id="fFrom"></select></label>
-    <label for="fTo">To siege<select id="fTo"></select></label>
-    <label for="fMin">Min. battles<select id="fMin"><option>1</option><option selected>2</option><option>3</option><option>5</option><option>10</option></select></label>
-    <label for="fSearch">Monster or player<input type="search" id="fSearch" placeholder="e.g. Solveig"></label>
-    <label class="check" for="fLeader"><input type="checkbox" id="fLeader" checked> Leader counts</label>
-  </section>
+<main class="gutter">
+  <div class="inner wrap">
+    <section class="strip" id="strip" aria-label="Summary"></section>
 
-  <nav class="tabs" role="tablist" id="tabs">
-    <button role="tab" data-tab="board" aria-selected="false" hidden>Leaderboard</button>
-    <button role="tab" data-tab="defs" aria-selected="true">Toughest defenses</button>
-    <button role="tab" data-tab="teams" aria-selected="false">Offense teams</button>
-    <button role="tab" data-tab="mydef" aria-selected="false">Defenses held</button>
-    <button role="tab" data-tab="sieges" aria-selected="false">Siege by siege</button>
-    <button role="tab" data-tab="log" aria-selected="false">All battles</button>
-  </nav>
+    <section class="filters" aria-label="Filters">
+      <label for="fPlayer" id="lPlayer" hidden>Member<select id="fPlayer"></select></label>
+      <label for="fFrom">From siege<select id="fFrom"></select></label>
+      <label for="fTo">To siege<select id="fTo"></select></label>
+      <label for="fMin">Min. battles<select id="fMin"><option>1</option><option selected>2</option><option>3</option><option>5</option><option>10</option></select></label>
+      <label for="fSearch">Monster or player<input type="search" id="fSearch" placeholder="e.g. Solveig"></label>
+      <label class="check" for="fLeader"><input type="checkbox" id="fLeader" checked> Leader counts</label>
+    </section>
 
-  <p class="hint" id="hint"></p>
-  <div id="view"></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <span id="tabInk" aria-hidden="true"></span>
+      <button role="tab" data-tab="board" aria-selected="false" hidden>Leaderboard</button>
+      <button role="tab" data-tab="defs" aria-selected="true">Toughest defenses</button>
+      <button role="tab" data-tab="teams" aria-selected="false">Offense teams</button>
+      <button role="tab" data-tab="mydef" aria-selected="false">Defenses held</button>
+      <button role="tab" data-tab="sieges" aria-selected="false">Siege by siege</button>
+      <button role="tab" data-tab="log" aria-selected="false">All battles</button>
+    </nav>
 
-  <footer id="foot"></footer>
-</div>
+    <p class="hint" id="hint"></p>
+    <div id="view"></div>
+
+    <footer id="foot"></footer>
+  </div>
+</main>
 
 <script>
 const DATA = /*__SIEGE_DATA__*/null;
@@ -153,6 +268,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":
 const pct = (w, n) => n ? Math.round(100 * w / n) : 0;
 const GUILD = DATA.players.length > 1;
 const TABS = ["board", "defs", "teams", "mydef", "sieges", "log"];
+const MOTION = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 // All monster icons live in one sprite sheet; each icon is a background offset into it.
 const SPRITE = DATA.sprite || { index: {} };
 const ICON_PX = 26;
@@ -194,7 +310,8 @@ function wrHTML(w, l) {
   return `<div class="wr"><span class="num">${p}%</span><span class="bar" role="img" aria-label="${p}% wins"><i style="width:${p}%"></i></span></div>`;
 }
 const wl = (w, l) => `<span class="num"><span class="w">${w}</span>–<span class="l">${l}</span></span>`;
-const plain = t => t.filter(m => m && m !== "null").join(" · ");
+const pill = (result, defense) => `<span class="pill ${result}">${result === "W" ? "✓ " : "✕ "}${defense ? (result === "W" ? "Held" : "Broken") : (result === "W" ? "Win" : "Loss")}</span>`;
+const crown = (tier, n) => `<svg class="crown t${tier}" viewBox="0 0 32 26" role="img" aria-label="Rank ${n}"><use href="#crown"/>${n ? `<text x="16" y="18.6" text-anchor="middle">${n}</text>` : ""}</svg>`;
 
 function filtered(type, everyone = false) {
   const a = +$("#fFrom").value, b = +$("#fTo").value, q = $("#fSearch").value.trim().toLowerCase(), p = who();
@@ -231,7 +348,7 @@ function subTable(rows, label, teamCol, showUsers) {
 }
 function battleList(items, defense) {
   return `<div><p class="sub-h">Battles</p><table class="sub-t"><tbody>` + items.slice().reverse().map(x =>
-    `<tr><td class="num">${x.date.slice(0, 10)}</td>${isOne() ? "" : `<td class="who">${esc(x.player)}</td>`}<td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td class="r"><span class="pill ${x.result}">${defense ? (x.result === "W" ? "Held" : "Broken") : (x.result === "W" ? "Win" : "Loss")}</span></td></tr>`).join("") + "</tbody></table></div>";
+    `<tr><td class="num">${x.date.slice(0, 10)}</td>${isOne() ? "" : `<td class="who">${esc(x.player)}</td>`}<td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td class="r">${pill(x.result, defense)}</td></tr>`).join("") + "</tbody></table></div>";
 }
 
 // Leaderboard rankings: the column each one sorts by, and for percentages, the count a member needs enough of.
@@ -270,6 +387,25 @@ function boardRows() {
   return { rows, need };
 }
 
+function podium(rows) {
+  const top = rows.filter(r => r.rank && r.rank <= 3).slice(0, 3);
+  if (!top.length) return "";
+  const m = S.rankBy;
+  const shown = r => ({
+    wr: [`${r.wr}%`, `${r.w}–${r.l} in ${r.n} attacks`],
+    w: [`${r.w}`, `attack wins · ${r.wr}% win rate`],
+    hr: [`${r.hr}%`, `${r.dw} held of ${r.dn} attacked`],
+    dw: [`${r.dw}`, `defense holds · ${r.hr}% held`],
+  })[m];
+  const places = ["1st", "2nd", "3rd"];
+  return '<div class="podium">' + top.map(r => {
+    const [val, why] = shown(r);
+    return `<button type="button" class="pod t${r.rank}" data-player="${esc(r.key)}">${crown(r.rank)}` +
+      `<span class="place">${places[r.rank - 1]} place</span><span class="name">${esc(r.key)}</span>` +
+      `<span class="val">${val}</span><span class="why">${why}</span>${r.fav ? teamHTML(r.fav.team) : ""}</button>`;
+  }).join("") + "</div>";
+}
+
 const VIEWS = {
   board: {
     label: () => "Leaderboard",
@@ -283,13 +419,14 @@ const VIEWS = {
       const { rows, need } = boardRows(), m = RANK_BY[S.rankBy];
       const col = (key, label) => `<th class="r${m.col === key ? " on" : ""}">${label}</th>`;
       const cell = (key, html) => `<td class="r${m.col === key ? " on" : ""}">${html}</td>`;
-      const rank = r => r.rank
-        ? `<span class="rank${r.rank <= 3 ? " p" + r.rank : ""}">${r.rank}</span>`
-        : `<span class="rank none" title="${m.qualify ? `Fewer than ${need} ${m.qualify}` : "None yet"}">–</span>`;
-      return `<div class="board"><div class="rankby" role="group" aria-label="Rank by">Rank by` +
+      const rank = r => !r.rank
+        ? `<span class="rank none" title="${m.qualify ? `Fewer than ${need} ${m.qualify}` : "None yet"}">–</span>`
+        : r.rank <= 3 ? `<span class="crownrank">${crown(r.rank, r.rank)}</span>`
+        : `<span class="rank">${r.rank}</span>`;
+      return `<div class="board"><div class="rankby">Rank by <div class="seg" role="group" aria-label="Rank by">` +
         Object.entries(RANK_BY).map(([k, v]) => `<button type="button" data-rank="${k}" aria-pressed="${S.rankBy === k}">${v.label}</button>`).join("") +
-        `</div><div class="tablebox"><table><thead><tr><th>#</th><th>Member</th>${col("w", "Attack wins")}${col("n", "Attacks")}${col("wr", "Win %")}${col("dw", "Def. holds")}${col("dn", "Def. hit")}${col("hr", "Hold %")}<th>Most-used team</th></tr></thead><tbody>` +
-        rows.map(r => `<tr class="row${r.rank ? "" : " unranked"}" data-player="${esc(r.key)}"><td>${rank(r)}</td><td class="who">${esc(r.key)}</td>` +
+        `</div></div>${podium(rows)}<div class="tablebox"><table><thead><tr><th>#</th><th>Member</th>${col("w", "Attack wins")}${col("n", "Attacks")}${col("wr", "Win %")}${col("dw", "Def. holds")}${col("dn", "Def. hit")}${col("hr", "Hold %")}<th>Most-used team</th></tr></thead><tbody>` +
+        rows.map(r => `<tr class="row${r.rank ? (r.rank <= 3 ? " top" + r.rank : "") : " unranked"}" data-player="${esc(r.key)}"><td>${rank(r)}</td><td class="who">${esc(r.key)}</td>` +
           cell("w", `<span class="num">${r.w}</span>`) + cell("n", `<span class="num">${r.n}</span>`) +
           cell("wr", r.n ? wrHTML(r.w, r.l) : '<span class="meta">—</span>') +
           cell("dw", `<span class="num">${r.dw}</span>`) + cell("dn", `<span class="num">${r.dn}</span>`) +
@@ -370,14 +507,14 @@ const VIEWS = {
       if (!all.length) return '<div class="tablebox"><p class="empty">No battles match these filters.</p></div>';
       const shown = all.slice(0, 600), users = !isOne();
       return `<div class="tablebox"><table><thead><tr><th>Date</th>${users ? "<th>Member</th>" : ""}<th>Type</th><th>Team</th><th>Opponent</th><th>Their team</th><th class="r">Result</th></tr></thead><tbody>` +
-        shown.map(x => `<tr><td class="num">${x.date}</td>${users ? `<td class="who">${esc(x.player)}</td>` : ""}<td>${x.type === "offense" ? "Attack" : "Defense"}</td><td>${teamHTML(x.team)}</td><td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td>${teamHTML(x.oppTeam)}</td><td class="r"><span class="pill ${x.result}">${x.type === "defense" ? (x.result === "W" ? "Held" : "Broken") : (x.result === "W" ? "Win" : "Loss")}</span></td></tr>`).join("") +
+        shown.map(x => `<tr><td class="num">${x.date}</td>${users ? `<td class="who">${esc(x.player)}</td>` : ""}<td>${x.type === "offense" ? "Attack" : "Defense"}</td><td>${teamHTML(x.team)}</td><td>${esc(x.opp)}<br><span class="meta">${esc(x.oppGuild)}</span></td><td>${teamHTML(x.oppTeam)}</td><td class="r">${pill(x.result, x.type === "defense")}</td></tr>`).join("") +
         "</tbody></table></div>" + (all.length > shown.length ? `<p class="hint">Showing the newest ${shown.length} of ${all.length}. Pick a member or search to narrow it down.</p>` : "");
     }
   }
 };
 
 function chart(rows) {
-  const H = 180, padL = 28, padB = 26, padT = 10, bw = 22, gap = 10;
+  const H = 190, padL = 28, padB = 26, padT = 10, bw = 22, gap = 10;
   const W = Math.max(320, padL + rows.length * (bw + gap) + 8);
   const max = Math.max(4, ...rows.map(r => r.w + r.l));
   const step = max > 40 ? 20 : max > 16 ? 10 : max > 8 ? 4 : 2, top = Math.ceil(max / step) * step;
@@ -385,13 +522,17 @@ function chart(rows) {
   let g = "";
   for (let v = 0; v <= top; v += step) g += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
   rows.forEach((r, i) => {
-    const x = padL + 8 + i * (bw + gap), base = y(0), yw = y(r.w), yl = y(r.w + r.l);
-    if (r.w) g += `<rect x="${x}" y="${yw}" width="${bw}" height="${Math.max(0, base - yw)}" rx="2" fill="var(--win)"/>`;
-    if (r.l) g += `<rect x="${x}" y="${yl}" width="${bw}" height="${Math.max(0, yw - yl - (r.w ? 2 : 0))}" rx="2" fill="var(--loss)"/>`;
+    const x = padL + 8 + i * (bw + gap), base = y(0), yw = y(r.w), yl = y(r.w + r.l), delay = `style="animation-delay:${(i * 18 + 80)}ms"`;
+    if (r.w) g += `<rect class="cb" ${delay} x="${x}" y="${yw}" width="${bw}" height="${Math.max(0, base - yw)}" rx="3" fill="var(--win)"/>`;
+    if (r.l) g += `<rect class="cb" ${delay} x="${x}" y="${yl}" width="${bw}" height="${Math.max(0, yw - yl - (r.w ? 2 : 0))}" rx="3" fill="var(--loss)"/>`;
     if (i % Math.ceil(rows.length / 8) === 0) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${r.date.slice(5)}</text>`;
     g += `<rect class="hit" x="${x - gap / 2}" y="${padT}" width="${bw + gap}" height="${H - padT - padB}" fill="transparent" data-tip="${esc(r.date)} · ${esc(r.opponents.join(" / "))}: ${r.w}W–${r.l}L"/>`;
   });
   return `<div class="chartbox"><div class="legend"><span style="--c:var(--win)">Wins</span><span style="--c:var(--loss)">Losses</span></div><div style="overflow-x:auto"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Attack wins and losses per siege">${g}</svg></div><div class="tip" hidden></div></div>`;
+}
+
+function ring(p) {
+  return `<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="16"/><circle class="val" cx="20" cy="20" r="16" pathLength="100" style="stroke-dashoffset:${100 - p}"/></svg>`;
 }
 
 function strip() {
@@ -400,29 +541,66 @@ function strip() {
   const defs = group(off, x => teamKey(x.oppTeam), x => x.oppTeam).sort((a, b) => b.l - a.l || a.wr - b.wr)[0];
   const minN = isOne() ? 4 : 10;
   const teams = group(off, x => teamKey(x.team), x => x.team).filter(t => t.n >= minN).sort((a, b) => b.wr - a.wr || b.n - a.n)[0];
-  const tile = (lbl, big, sub) => `<div class="tile"><span class="lbl">${lbl}</span><span class="big">${big}</span><span class="sub">${sub}</span></div>`;
+  const big = (n, suffix = "") => `<span class="big"><span data-to="${n}">${n}</span>${suffix.startsWith(" ") ? `<small>${suffix}</small>` : suffix}</span>`;
+  const tile = (lbl, value, sub, gauge = "") => `<div class="tile"><span class="lbl">${lbl}</span>${value}${gauge}<span class="sub">${sub}</span></div>`;
+  const ap = pct(w, off.length), hp = pct(dw, dfn.length);
   $("#strip").innerHTML =
-    tile("Attacks", `${pct(w, off.length)}%`, `${w} wins, ${off.length - w} losses`) +
-    tile("Defense held", dfn.length ? `${pct(dw, dfn.length)}%` : "—", `${dw} held, ${dfn.length - dw} broken`) +
-    tile("Hardest defense", defs ? `${defs.l} losses` : "—", defs ? teamHTML(defs.team) : "") +
-    tile(`Best team (${minN}+ attacks)`, teams ? `${teams.wr}%` : "—", teams ? teamHTML(teams.team) + ` <span class="num">${teams.w}–${teams.l}</span>` : "");
+    tile("Attack win rate", off.length ? big(ap, "%") : '<span class="big">—</span>', `${w} wins, ${off.length - w} losses`, off.length ? ring(ap) : "") +
+    tile("Defense held", dfn.length ? big(hp, "%") : '<span class="big">—</span>', `${dw} held, ${dfn.length - dw} broken`, dfn.length ? ring(hp) : "") +
+    tile("Hardest defense", defs ? big(defs.l, " losses") : '<span class="big">—</span>', defs ? teamHTML(defs.team) : "") +
+    tile(`Best team (${minN}+ attacks)`, teams ? big(teams.wr, "%") : '<span class="big">—</span>', teams ? teamHTML(teams.team) + ` <span class="num">${teams.w}–${teams.l}</span>` : "");
 }
 
-function render() {
+// Counts each number up from 0. The final value is already in the page, so nothing depends on this running.
+function countUp(root) {
+  if (!MOTION || !window.requestAnimationFrame) return;
+  root.querySelectorAll("[data-to]").forEach(el => {
+    const to = +el.dataset.to, t0 = performance.now(), dur = 900;
+    const step = t => {
+      const k = Math.min(1, (t - t0) / dur), eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(to * eased);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function replay(el, on) {
+  el.classList.remove("enter");
+  if (on && MOTION) { void el.offsetWidth; el.classList.add("enter"); }
+}
+
+function moveInk() {
+  const b = $('#tabs button[aria-selected="true"]'), ink = $("#tabInk");
+  if (!b || b.hidden) return;
+  ink.style.left = b.offsetLeft + "px"; ink.style.top = b.offsetTop + "px";
+  ink.style.width = b.offsetWidth + "px"; ink.style.height = b.offsetHeight + "px";
+}
+
+// animate = true when the view changes (first load, new tab, new ranking, new member); filters and typing don't replay motion.
+function render(animate = false) {
   if (S.tab === "board" && !GUILD) S.tab = "defs";
   $("#hName").textContent = GUILD ? (who() || DATA.guild) : DATA.players[0];
   strip();
+  replay($("#strip"), animate);
+  if (animate) countUp($("#strip"));
   document.querySelectorAll("#tabs button").forEach(b => {
     b.setAttribute("aria-selected", b.dataset.tab === S.tab);
     b.textContent = VIEWS[b.dataset.tab].label();
   });
+  moveInk();
   $("#hint").textContent = VIEWS[S.tab].hint();
-  $("#view").innerHTML = VIEWS[S.tab].render();
+  const view = $("#view");
+  view.innerHTML = VIEWS[S.tab].render();
+  if (animate) [...view.querySelectorAll("tbody > tr.row")].slice(0, 12).forEach((tr, i) => tr.style.setProperty("--i", i));
+  replay(view, animate);
 }
 
 function init() {
   const days = /^\d+$/.test(DATA.range) ? `last ${DATA.range} days` : DATA.range;
-  $("#hMeta").textContent = `${DATA.guild}${GUILD ? ` · ${DATA.players.length} members` : ""} · ${sieges.length} sieges, ${days} · data from SWGT, ${DATA.generated}`;
+  const chip = (b, t = "") => `<span><b>${esc(b)}</b>${t ? " " + esc(t) : ""}</span>`;
+  $("#hMeta").innerHTML = (GUILD ? chip(DATA.players.length, "members") : chip(DATA.guild)) +
+    (GUILD ? chip(DATA.guild) : "") + chip(sieges.length, "sieges") + chip(days) + chip("SWGT", `data, ${DATA.generated}`);
   $("#foot").textContent = `Generated ${DATA.generated} by ${GUILD ? "fetch_guild.py" : "fetch_siege.py"}. Win rates count wins and losses only.`;
   if (GUILD) {
     $("#lPlayer").hidden = false;
@@ -436,13 +614,14 @@ function init() {
   $("#fFrom").innerHTML = opts; $("#fTo").innerHTML = opts;
   $("#fFrom").value = 0; $("#fTo").value = sieges.length - 1;
 
-  ["#fPlayer", "#fFrom", "#fTo", "#fMin", "#fLeader"].forEach(id => $(id).addEventListener("change", () => { S.open = null; render(); }));
-  $("#fSearch").addEventListener("input", render);
+  $("#fPlayer").addEventListener("change", () => { S.open = null; render(true); });
+  ["#fFrom", "#fTo", "#fMin", "#fLeader"].forEach(id => $(id).addEventListener("change", () => { S.open = null; render(); }));
+  $("#fSearch").addEventListener("input", () => render());
   $("#tabs").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     S.tab = b.dataset.tab; S.open = null;
     try { localStorage.setItem("siegeTab", S.tab); } catch (err) {}
-    render();
+    render(true);
   });
   $("#view").addEventListener("click", e => {
     const h = e.target.closest("th[data-sort]");
@@ -452,9 +631,9 @@ function init() {
       return render();
     }
     const rb = e.target.closest("button[data-rank]");
-    if (rb) { S.rankBy = rb.dataset.rank; return render(); }
-    const p = e.target.closest("tr[data-player]");
-    if (p) { $("#fPlayer").value = p.dataset.player; S.tab = "defs"; S.open = null; window.scrollTo({ top: 0 }); return render(); }
+    if (rb) { S.rankBy = rb.dataset.rank; return render(true); }
+    const p = e.target.closest("[data-player]");
+    if (p) { $("#fPlayer").value = p.dataset.player; S.tab = "defs"; S.open = null; window.scrollTo({ top: 0, behavior: MOTION ? "smooth" : "auto" }); return render(true); }
     const r = e.target.closest("tr.row");
     if (r) { S.open = S.open === r.dataset.open ? null : r.dataset.open; render(); }
   });
@@ -467,7 +646,11 @@ function init() {
     tip.textContent = hit.dataset.tip; tip.hidden = false;
     tip.style.left = (e.clientX - box.left) + "px"; tip.style.top = (e.clientY - box.top - 10) + "px";
   });
-  render();
+  window.addEventListener("resize", moveInk);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveInk);
+  render(true);
+  // Turn on the tab highlight's slide only after it's in place, so it doesn't fly in from the corner.
+  requestAnimationFrame(() => $("#tabInk").classList.add("ready"));
 }
 init();
 </script>
