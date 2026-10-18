@@ -18,7 +18,7 @@ Outputs (in --out, default ./output):
     siege_data.json     everything parsed
     attacks.csv         one row per attack
     defenses.csv        one row per time a defense was hit
-    siege_report.html   interactive report, self-contained (monster icons embedded)
+    siege_report.html   interactive report, self-contained (monster icons embedded as one image)
 """
 import argparse
 import base64
@@ -31,11 +31,13 @@ import http.cookiejar
 import json
 import os
 import re
+import struct
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, "cache")
@@ -300,27 +302,112 @@ def load_battles(swgt, matches, meta, players, refresh=False):
     return unique, icons
 
 
+ICON_SIZE = 36   # SWGT's monster icons are 36x36
+SPRITE_COLS = 24
+
+
+def png_chunks(data):
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("not a PNG file")
+    pos = 8
+    while pos < len(data):
+        length, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        yield kind, data[pos + 8:pos + 8 + length]
+        pos += 12 + length
+
+
+def png_to_rgba(data):
+    """Decode an 8-bit RGB or RGBA, non-interlaced PNG (what SWGT serves) to (width, height, RGBA rows)."""
+    header, idat = None, b""
+    for kind, body in png_chunks(data):
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", body)
+        elif kind == b"IDAT":
+            idat += body
+    width, height, depth, color, _, _, interlace = header
+    if depth != 8 or color not in (2, 6) or interlace:
+        raise ValueError(f"unsupported PNG format (bit depth {depth}, color type {color})")
+    bpp = 4 if color == 6 else 3
+    stride, raw, rows, prev = width * bpp, zlib.decompress(idat), [], bytearray(width * bpp)
+    for y in range(height):
+        start = y * (stride + 1)
+        kind, row = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            left = row[i - bpp] if i >= bpp else 0
+            up, up_left = prev[i], prev[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                row[i] = (row[i] + left) & 255
+            elif kind == 2:
+                row[i] = (row[i] + up) & 255
+            elif kind == 3:
+                row[i] = (row[i] + (left + up) // 2) & 255
+            elif kind == 4:
+                p = left + up - up_left
+                pa, pb, pc = abs(p - left), abs(p - up), abs(p - up_left)
+                row[i] = (row[i] + (left if pa <= pb and pa <= pc else up if pb <= pc else up_left)) & 255
+        prev = row
+        if bpp == 3:
+            rgba = bytearray(width * 4)
+            rgba[0::4], rgba[1::4], rgba[2::4] = row[0::3], row[1::3], row[2::3]
+            rgba[3::4] = b"\xff" * width
+            row = rgba
+        rows.append(bytes(row))
+    return width, height, rows
+
+
+def rgba_to_png(width, height, rows):
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+    # PNG "Up" filter (each byte minus the one above it) compresses icon sheets best.
+    prev, filtered = bytes(width * 4), []
+    for row in rows:
+        filtered.append(b"\x02" + bytes((a - b) & 255 for a, b in zip(row, prev)))
+        prev = row
+    raw = b"".join(filtered)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
 def embed_icons(icons):
-    """Download each monster icon once (cached on disk) and return {name: data URI}."""
+    """Download each monster icon once (cached on disk) and pack them all into one sprite sheet.
+
+    One image instead of hundreds keeps the report small and shareable. Returns
+    {"uri": PNG data URI, "cols": columns, "cell": icon size, "index": {name: position}}."""
     folder = os.path.join(CACHE, "icons")
     os.makedirs(folder, exist_ok=True)
 
     def fetch(item):
         name, file = item
         path = os.path.join(folder, file)
-        if not os.path.exists(path):
-            try:
+        try:
+            if not os.path.exists(path):
                 # ICON_BASE is a fixed https:// address.
                 req = urllib.request.Request(ICON_BASE + file, headers={"User-Agent": UA})  # noqa: S310
                 with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
                     write_file(path, r.read())
-            except OSError as e:
-                print(f"  icon for {name} not downloaded: {e}")
-                return name, None
-        return name, "data:image/png;base64," + base64.b64encode(read_file(path, binary=True)).decode()
+            return name, png_to_rgba(read_file(path, binary=True))
+        except (OSError, ValueError, zlib.error) as e:
+            print(f"  icon for {name} skipped: {e}")
+            return name, None
 
     with concurrent.futures.ThreadPoolExecutor(8) as pool:
-        return {name: uri for name, uri in pool.map(fetch, icons.items()) if uri}
+        decoded = [(name, img) for name, img in pool.map(fetch, sorted(icons.items())) if img]
+    if not decoded:
+        return None
+
+    cell, cols = ICON_SIZE, SPRITE_COLS
+    sheet_rows = -(-len(decoded) // cols)
+    canvas = [bytearray(cols * cell * 4) for _ in range(sheet_rows * cell)]
+    index = {}
+    for n, (name, (_width, _height, rows)) in enumerate(decoded):
+        x, y = (n % cols) * cell, (n // cols) * cell
+        for dy, row in enumerate(rows[:cell]):
+            line = row[:cell * 4]
+            canvas[y + dy][x * 4:x * 4 + len(line)] = line
+        index[name] = n
+    png = rgba_to_png(cols * cell, sheet_rows * cell, [bytes(r) for r in canvas])
+    return {"uri": "data:image/png;base64," + base64.b64encode(png).decode(), "cols": cols, "cell": cell,
+            "index": index}
 
 
 def check_totals(battles, player, off_page, def_page):
@@ -339,7 +426,7 @@ def write_outputs(data, out, title):
     os.makedirs(out, exist_ok=True)
     battles = data["battles"]
     with open(os.path.join(out, "siege_data.json"), "w", encoding="utf-8") as f:
-        json.dump({k: v for k, v in data.items() if k != "icons"}, f, ensure_ascii=False, indent=1)
+        json.dump({k: v for k, v in data.items() if k != "sprite"}, f, ensure_ascii=False, indent=1)
     for kind, fname in (("offense", "attacks.csv"), ("defense", "defenses.csv")):
         with open(os.path.join(out, fname), "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f)
@@ -368,7 +455,7 @@ def build_data(player_names, guild, days, matches, meta, battles, icons):
                     "opponents": v["guilds"]} for m, v in sorted(meta.items(), key=lambda x: x[1]["ts"])
                    if m in matches],
         "battles": battles,
-        "icons": embed_icons({n: f for n, f in icons.items() if n != "null"}),
+        "sprite": embed_icons({n: f for n, f in icons.items() if n != "null"}),
     }
 
 

@@ -70,7 +70,7 @@ tr.detail > td { background: var(--bg); padding: 12px 16px 16px }
 .team { display: flex; flex-wrap: wrap; gap: 4px; }
 .mon { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 2px 8px 2px 2px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); white-space: nowrap }
 .mon.noimg { padding-left: 8px }
-.mon img { width: 26px; height: 26px; border-radius: 4px; display: block }
+.mon .ico { width: 26px; height: 26px; border-radius: 4px; display: block; flex: none; background-repeat: no-repeat }
 .mon.lead { border-color: var(--accent); color: var(--accent); font-weight: 600 }
 tr.detail .mon { background: var(--panel) }
 .wr { display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 120px }
@@ -153,7 +153,14 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":
 const pct = (w, n) => n ? Math.round(100 * w / n) : 0;
 const GUILD = DATA.players.length > 1;
 const TABS = ["board", "defs", "teams", "mydef", "sieges", "log"];
-const ICONS = DATA.icons || {};
+// All monster icons live in one sprite sheet; each icon is a background offset into it.
+const SPRITE = DATA.sprite || { index: {} };
+const ICON_PX = 26;
+if (SPRITE.uri) {
+  const css = document.createElement("style");
+  css.textContent = `.mon .ico { background-image: url("${SPRITE.uri}"); background-size: ${SPRITE.cols * ICON_PX}px auto }`;
+  document.head.appendChild(css);
+}
 const S = { tab: GUILD ? "board" : "defs", sort: {}, open: null, rankBy: "wr" };
 try { const t = localStorage.getItem("siegeTab"); if (TABS.includes(t) && (GUILD || t !== "board")) S.tab = t; } catch (e) {}
 const hashTab = location.hash.slice(1);
@@ -171,7 +178,9 @@ function teamKey(t) {
   return [clean[0], ...clean.slice(1).sort()].join(" · ");
 }
 function mon(m, lead) {
-  const img = ICONS[m] ? `<img src="${ICONS[m]}" alt="" loading="lazy" width="26" height="26">` : "";
+  const i = SPRITE.index[m];
+  const img = i === undefined ? "" :
+    `<span class="ico" aria-hidden="true" style="background-position:-${(i % SPRITE.cols) * ICON_PX}px -${Math.floor(i / SPRITE.cols) * ICON_PX}px"></span>`;
   return `<span class="mon${lead ? " lead" : ""}${img ? "" : " noimg"}"${lead ? ' title="Leader"' : ""}>${img}${esc(m)}</span>`;
 }
 function teamHTML(t, lead = $("#fLeader").checked) {
