@@ -1,0 +1,15 @@
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import sorting
+    "B",        # bugbear: likely bugs
+    "UP",       # pyupgrade
+    "SIM",      # simplifications
+    "S",        # bandit: security checks
+    "PLE",      # pylint errors
+]

@@ -13,8 +13,19 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_siege import (HERE, SWGT, build_data, check_totals, common_args, guild_members,
-                         load_battles, match_ids, match_rows, member_page, write_outputs)
+from fetch_siege import (
+    HERE,
+    SWGT,
+    build_data,
+    check_totals,
+    common_args,
+    guild_members,
+    load_battles,
+    match_ids,
+    match_rows,
+    member_page,
+    write_outputs,
+)
 
 
 def main():

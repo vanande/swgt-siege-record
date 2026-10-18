@@ -40,6 +40,16 @@ member whose numbers differ.
 - The script only sees sieges that your guild uploaded to SWGT. Battles fought under an
   older in-game name are counted under the player's current name.
 
+## Development
+
+The code is checked with [ruff](https://docs.astral.sh/ruff/) (settings in `pyproject.toml`),
+which also runs on GitHub for every push:
+
+```
+pip install ruff
+ruff check .
+```
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

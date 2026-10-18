@@ -43,12 +43,29 @@ ICON_BASE = "https://do9d4mpqk497d.cloudfront.net/common/images/monsters36/"
 MATCH_RE = re.compile(r"siegeBattle/specific&siegeID=(\d+)&matchID=(\d+)&guildID=(\d+)")
 
 
+def read_file(path, binary=False):
+    if binary:
+        with open(path, "rb") as f:
+            return f.read()
+    with open(path, encoding="utf-8-sig") as f:
+        return f.read()
+
+
+def write_file(path, content):
+    if isinstance(content, bytes):
+        with open(path, "wb") as f:
+            f.write(content)
+    else:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+
 def load_env():
     """Read KEY=VALUE lines from .env beside the script; real environment variables win."""
     path = os.path.join(HERE, ".env")
     if not os.path.exists(path):
         return
-    for line in open(path, encoding="utf-8-sig"):
+    for line in read_file(path).splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)
@@ -60,7 +77,8 @@ def load_env():
 
 class SWGT:
     def __init__(self, subdomain=None):
-        subdomain = subdomain or os.environ.get("SWGT_SUBDOMAIN") or input("SWGT subdomain (the part before .swgt.io): ")
+        subdomain = (subdomain or os.environ.get("SWGT_SUBDOMAIN")
+                     or input("SWGT subdomain (the part before .swgt.io): "))
         # Accept "reisfarmer", "reisfarmer.swgt.io" or a full https:// address.
         subdomain = re.sub(r"^https?://|\.swgt\.io.*$", "", subdomain.strip().lower()).strip("/")
         self.base = f"https://{subdomain}.swgt.io"
@@ -78,9 +96,11 @@ class SWGT:
         password = os.environ.get("SWGT_PASSWORD") or getpass.getpass("SWGT password: ")
         data = urllib.parse.urlencode({"username": user, "password": password,
                                        "oldBrowser": "Y", "keepMeLoggedIn": "Y"}).encode()
-        req = urllib.request.Request(self.base + "/controllers/account/login", data=data,
+        # self.base is always built as https://<subdomain>.swgt.io, so no file: or custom schemes.
+        req = urllib.request.Request(self.base + "/controllers/account/login", data=data,  # noqa: S310
                                      headers={"Referer": self.base + "/login.jsp"})
-        self.opener.open(req, timeout=60).read()
+        with self.opener.open(req, timeout=60) as r:
+            r.read()
         if 'id="password"' in self.get("/"):
             sys.exit("Login failed: check your SWGT username and password.")
         print("Logged in.")
@@ -111,14 +131,14 @@ def summary_totals(page, table_id):
     """W/L totals from SWGT's own per-siege table, used to cross-check the parse."""
     start = page.find(f'id="{table_id}"')
     body = page[start:page.find("</table>", start)]
-    w = l = 0
+    wins = losses = 0
     # Only per-siege rows carry a data-sort date; this skips the table's totals row.
     for row in re.findall(r"<tr>(\s*<td[^>]*data-sort=.*?)</tr>", body, re.S):
         cells = re.findall(r'<td class="text-center">\s*(\d*)\s*</td>', row)
         if len(cells) >= 2:
-            w += int(cells[0] or 0)
-            l += int(cells[1] or 0)
-    return w, l
+            wins += int(cells[0] or 0)
+            losses += int(cells[1] or 0)
+    return wins, losses
 
 
 def match_rows(page):
@@ -150,8 +170,8 @@ def monsters(fragment, icons):
 
 def wizard_names(page):
     """{wizardID: name} from the guild member tables on a match page (names as they were then)."""
-    return dict((wid, html.unescape(name).strip()) for name, wid in
-                re.findall(r'<td[^>]*>([^<>\n]+?)\s*<a href="/controllers/guildMembers/specific\?wizardID=(\d+)', page))
+    pairs = re.findall(r'<td[^>]*>([^<>\n]+?)\s*<a href="/controllers/guildMembers/specific\?wizardID=(\d+)', page)
+    return {wid: html.unescape(name).strip() for name, wid in pairs}
 
 
 def section(chunk, name, nxt):
@@ -207,19 +227,19 @@ def load_battles(swgt, matches, meta, players, refresh=False):
             print(f"  [{n}/{len(matches)}] downloading match {match_id}")
             page = swgt.get("/controllers/siegeBattle/specific",
                             {"siegeID": siege_id, "matchID": match_id, "guildID": guild_id})
-            open(path, "w", encoding="utf-8").write(page)
+            write_file(path, page)
             time.sleep(1)
         paths.append((match_id, path))
 
     # Players can rename; the newest match shows each account's current name.
     latest = {}
-    for match_id, path in sorted(paths, key=lambda x: meta.get(x[0], {}).get("ts", 0)):
-        latest.update(wizard_names(open(path, encoding="utf-8").read()))
+    for _match_id, path in sorted(paths, key=lambda x: meta.get(x[0], {}).get("ts", 0)):
+        latest.update(wizard_names(read_file(path)))
     ids = {wid: name for wid, name in latest.items() if name in players}
 
     battles, icons = [], {}
     for match_id, path in paths:
-        battles.extend(parse_battle_logs(open(path, encoding="utf-8").read(), players, match_id, icons, ids))
+        battles.extend(parse_battle_logs(read_file(path), players, match_id, icons, ids))
 
     seen, unique = set(), []
     for b in sorted(battles, key=lambda b: b["ts"]):
@@ -240,13 +260,14 @@ def embed_icons(icons):
         path = os.path.join(folder, file)
         if not os.path.exists(path):
             try:
-                req = urllib.request.Request(ICON_BASE + file, headers={"User-Agent": UA})
-                with urllib.request.urlopen(req, timeout=30) as r:
-                    open(path, "wb").write(r.read())
+                # ICON_BASE is a fixed https:// address.
+                req = urllib.request.Request(ICON_BASE + file, headers={"User-Agent": UA})  # noqa: S310
+                with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
+                    write_file(path, r.read())
             except OSError as e:
                 print(f"  icon for {name} not downloaded: {e}")
                 return name, None
-        return name, "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
+        return name, "data:image/png;base64," + base64.b64encode(read_file(path, binary=True)).decode()
 
     with concurrent.futures.ThreadPoolExecutor(8) as pool:
         return {name: uri for name, uri in pool.map(fetch, icons.items()) if uri}
@@ -256,11 +277,11 @@ def check_totals(battles, player, off_page, def_page):
     ok = True
     for kind, page, table in (("offense", off_page, "siegeOffenseList"), ("defense", def_page, "siegeDefenseList")):
         got = [b for b in battles if b["type"] == kind and b["player"] == player]
-        w, l = sum(b["result"] == "W" for b in got), sum(b["result"] == "L" for b in got)
+        wins, losses = sum(b["result"] == "W" for b in got), sum(b["result"] == "L" for b in got)
         sw, sl = summary_totals(page, table)
-        ok &= (w, l) == (sw, sl)
-        if (w, l) != (sw, sl):
-            print(f"  {player} {kind}: parsed {w}W-{l}L but SWGT shows {sw}W-{sl}L")
+        ok &= (wins, losses) == (sw, sl)
+        if (wins, losses) != (sw, sl):
+            print(f"  {player} {kind}: parsed {wins}W-{losses}L but SWGT shows {sw}W-{sl}L")
     return ok
 
 
@@ -278,7 +299,7 @@ def write_outputs(data, out, title):
                     w.writerow([b["player"], b["date"], b["match"], b["oppGuild"], " / ".join(b["team"]),
                                 b["opp"], " / ".join(b["oppTeam"]), b["result"]])
 
-    template = open(os.path.join(HERE, "report_template.html"), encoding="utf-8").read()
+    template = read_file(os.path.join(HERE, "report_template.html"))
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     path = os.path.join(out, "siege_report.html")
     with open(path, "w", encoding="utf-8") as f:
